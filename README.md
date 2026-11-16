@@ -4,6 +4,8 @@ Ask in the chat and Claude Code does it in the browser you already use: Gmail, W
 
 ![autochrome: Claude works in a background tab while you keep typing, every step shows in the menu bar, and one click stops it](assets/autochrome.gif)
 
+Vertical version for stories, 15 s: [autochrome-story.mp4](assets/story/autochrome-story.mp4).
+
 It is an MCP server that lets Claude Code drive the browser you already use on a Mac: list and open tabs, read a page, click, type and attach a local file. It talks to the browser through AppleScript (JXA), so there is no extension to install, no browser restart and no open port. Your logged-in sites, such as WhatsApp Web, work as they are.
 
 Vivaldi comes first and is the one tested. Other Chromium browsers with AppleScript (Google Chrome, Brave, Microsoft Edge, Arc) use the same calls.
