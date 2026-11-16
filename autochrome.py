@@ -10,6 +10,7 @@ Sem dependências: só a biblioteca padrão do Python 3.9+.
 Uso direto, sem MCP:  python3 autochrome.py call <ferramenta> '<json>'
 """
 import base64
+import glob
 import json
 import mimetypes
 import os
@@ -199,7 +200,7 @@ def click(target, tab_id=None):
       for(const t of ['pointerdown','mousedown','pointerup','mouseup'])
         e.dispatchEvent(new (t[0]==='p'?PointerEvent:MouseEvent)(t,o));
       if(e.click) e.click(); else e.dispatchEvent(new MouseEvent('click',o));
-      return 'clicado';""", T=target)
+      return 'clicado: '+(e.innerText||e.value||e.getAttribute('aria-label')||e.title||'').trim().slice(0,40);""", T=target)
 
 
 def type_(target, text, tab_id=None, clear=False, enter=False):
@@ -280,7 +281,9 @@ SPEC = [
               paste={"type": "boolean", "description": "cola o arquivo no alvo (evento paste) em vez de soltar"}),
          ["path"]),
     tool("js", js, "Roda JavaScript na aba. `code` é corpo de função async: use return e, se quiser, await. Devolve o valor em JSON.",
-         dict(TAB, code={"type": "string"}), ["code"]),
+         dict(TAB, code={"type": "string"}, label={"type": "string", "description": "o que o código faz, em poucas "
+              "palavras simples, com verbo no infinitivo (ex.: 'agrupar as abas por site'). Vai para o registro do "
+              "painel no lugar do código; sem label o usuário só lê 'rodou um comando'."}), ["code"]),
     tool("close", close, "Fecha uma aba pelo id.", TAB, ["tab_id"]),
 ]
 HANDLERS = {n: f for n, f, _ in SPEC}
@@ -335,10 +338,87 @@ def brief(name, args):
     return str(args.get("target", ""))[:60]
 
 
+CHAT = None
+INTERNAS = {"bookmarks": "Favoritos", "settings": "Configurações do navegador", "history": "Histórico",
+            "extensions": "Extensões", "downloads": "Downloads", "newtab": "aba nova"}
+
+
+def chat():
+    """Título do chat que chamou (registro do app), para o painel dizer quem fez. Vazio se não achar."""
+    global CHAT
+    if CHAT is not None:
+        return CHAT
+    sid, cwd, pid = os.environ.get("CLAUDE_CODE_SESSION_ID", ""), "", os.getppid()
+    for _ in range(8):  # servidor MCP não recebe o id: sobe até o processo do Claude e usa a pasta dele
+        if sid or pid <= 1:
+            break
+        r = subprocess.run(["ps", "-o", "ppid=,comm=", "-p", str(pid)], capture_output=True, text=True).stdout.split(None, 1)
+        if len(r) < 2:
+            break
+        if r[1].strip().endswith("/claude"):
+            out = subprocess.run(["lsof", "-a", "-p", str(pid), "-d", "cwd", "-Fn"], capture_output=True, text=True).stdout
+            cwd = next((x[1:] for x in out.splitlines() if x.startswith("n")), "")
+            break
+        pid = int(r[0])
+    CHAT, quando = "", 0
+    for f in glob.glob(os.path.expanduser("~/Library/Application Support/Claude/claude-code-sessions/*/*/local_*.json")):
+        try:
+            with open(f, "rb") as fh:
+                b = fh.read()
+            if (sid and sid.encode() not in b) or (cwd and cwd.encode() not in b) or not (sid or cwd):
+                continue
+            d = json.loads(b)
+        except (OSError, ValueError):
+            continue
+        if sid and (d.get("cliSessionId") == sid or sid in (d.get("priorCliSessionIds") or [])):
+            CHAT = d.get("title") or ""
+            break
+        if cwd and d.get("cwd") == cwd and not d.get("isArchived") and (d.get("lastActivityAt") or 0) > quando:
+            CHAT, quando = d.get("title") or "", d.get("lastActivityAt") or 0  # shortcut: dois chats na mesma pasta → o mais recente
+    return CHAT
+
+
+def frase(name, args, site, ok, msg):
+    """O que o chat fez (ou tentou) e onde, em português simples. Código nunca aparece."""
+    onde = INTERNAS.get(site) or re.sub(r"^www\.", "", site) or "a aba"
+    em = " · " + onde
+    t = str(args.get("text", ""))
+    t = "•••" if re.fullmatch(r"\S{16,}", t) else t[:30]
+    arq = os.path.basename(str(args.get("path", "")))
+    lab = " ".join(str(args.get("label", "")).split())[:60]
+    nome = str(msg).partition(": ")[2] if ok and name == "click" else ""
+    f = {"tabs": ("listou as abas", "listar as abas"),
+         "open": ("abriu " + onde, "abrir " + onde),
+         "read": ("leu " + onde, "ler " + onde),
+         "click": (("clicou em “%s”" % nome if nome else "clicou na página") + em, "clicar" + em),
+         "type": ("digitou «%s»" % t + em, "digitar" + em),
+         "attach": ("anexou " + arq + em, "anexar " + arq + em),
+         "js": (("mandou " + lab if lab else "rodou um comando") + em, (lab or "rodar um comando") + em),
+         "close": ("fechou " + onde, "fechar " + onde)}.get(name, (name, name))
+    return f[0] if ok else "tentou " + f[1]
+
+
+def motivo(msg):
+    """Erro técnico → frase que o usuário entende."""
+    m = str(msg)
+    for k, txt in (("está usando o", "você estava usando o " + APP), ("PARADO", "o autochrome estava parado"),
+                   ("só leitura", "o autochrome estava em só leitura"), ("fora da lista", "site fora da lista permitida"),
+                   ("sensível", "arquivo de chave ou senha: bloqueado"), ("aba não encontrada", "a aba já tinha fechado"),
+                   ("elemento não encontrado", "não achou o botão ou campo na página"),
+                   ("não devolveu resultado", "a aba não respondeu (dormindo ou página interna)"),
+                   ("tab_id", "faltou dizer em qual aba"), ("timed out", "o navegador demorou demais")):
+        if k in m:
+            return txt
+    return "erro: " + m[:80]
+
+
 def log(name, args, site, ok, msg):
     os.makedirs(D, mode=0o700, exist_ok=True)
     p = os.path.join(D, "log.jsonl")
-    e = {"t": int(time.time()), "tool": name, "site": site, "alvo": brief(name, args), "ok": ok, "msg": str(msg)[:120]}
+    e = {"t": int(time.time()), "tool": name, "site": site, "alvo": brief(name, args), "ok": ok, "msg": str(msg)[:120],
+         "chat": chat(), "frase": frase(name, args, site, ok, msg)}
+    if not ok:
+        e["motivo"] = motivo(msg)
     fd = os.open(p, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
     try:
         os.write(fd, (json.dumps(e, ensure_ascii=False) + "\n").encode())
@@ -404,11 +484,11 @@ def call(name, args):
     site = ""
     try:
         site = guard(name, args, ctl)
-        out = HANDLERS[name](**args)
+        out = HANDLERS[name](**{k: v for k, v in args.items() if k != "label"})
     except Exception as e:
         log(name, args, site, False, e)
         raise
-    log(name, args, site, True, out if name in ("open", "attach") else "")
+    log(name, args, site, True, out if name in ("open", "attach", "click") else "")
     return out
 
 
@@ -427,7 +507,7 @@ def serve():
             continue
         if method == "initialize":
             res = {"protocolVersion": params.get("protocolVersion", "2024-11-05"), "capabilities": {"tools": {}},
-                   "serverInfo": {"name": "autochrome", "version": "1.3.0"}}
+                   "serverInfo": {"name": "autochrome", "version": "1.4.0"}}
         elif method == "tools/list":
             res = {"tools": [s for _, _, s in SPEC]}
         elif method == "tools/call":

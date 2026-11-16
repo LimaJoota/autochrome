@@ -93,8 +93,10 @@
       let e; try { e = JSON.parse(ln); } catch (x) { continue; }
       const li = document.createElement('li'); if (!e.ok) li.className = 'err';
       const d = new Date(e.t * 1000), hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-      const txt = [e.site, e.alvo].filter(Boolean).join(' · ') + (e.ok ? '' : ' — ' + e.msg);
-      for (const [c, t] of [['h', hm], ['k', e.tool], ['x', txt]]) {
+      const quem = (e.chat || '').split(' — ')[0];  // registro antigo, sem frase: formato de antes
+      const txt = (e.frase || [e.site, e.alvo].filter(Boolean).join(' · ')) + (e.ok ? '' : ' — ' + (e.motivo || e.msg));
+      if (e.chat) li.title = e.chat;
+      for (const [c, t] of [['h', hm], ['k', e.frase ? quem : e.tool], ['x', txt]]) {
         const sp = document.createElement('span'); sp.className = c; sp.textContent = t; li.appendChild(sp);
       }
       ul.appendChild(li);

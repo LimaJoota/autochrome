@@ -32,7 +32,7 @@ Then, in the browser, turn on **Allow JavaScript from Apple Events** (Vivaldi: S
 | `click` | Clicks by number from `read` or by CSS selector. |
 | `type` | Types into an input, textarea or editable field. `clear` and `enter` are optional. |
 | `attach` | Puts a local file into a file input, drops it on a drop area, or pastes it into a field (`paste`, used by WhatsApp Web). |
-| `js` | Runs JavaScript in the tab (async function body: `return`, and `await` if needed). |
+| `js` | Runs JavaScript in the tab (async function body: `return`, and `await` if needed). `label` says in plain words what it does, for the log. |
 | `close` | Closes a tab by id. |
 
 Every tool takes `browser` and `show`. Without MCP: `python3 autochrome.py call read '{"tab_id":"123"}'`.
@@ -49,7 +49,7 @@ Pick per task with `show`, or set the default in the panel.
 autochrome lives in the menu bar. The icon is a cursor, slashed while stopped, and it clicks for a moment after each action. Its menu shows:
 
 - **Stop / Resume**: every call is refused until you resume.
-- **Recent actions**: the last eight, with time, tool and site.
+- **Recent actions**: the last eight in plain words: time, which chat, what it did and where ("12:21 Panel: tried to open Bookmarks"). A failure shows why underneath. Code never shows: `js` takes a short `label` that goes to the log instead.
 - **Mode** (Hidden / Visible), **Browser** (the default one) and **Read only** (no click, type, attach or `js`).
 - **Settings…** (⌘,): a window with the same options, **Allowed sites** (actions only on these domains; empty means all) and the full log.
 

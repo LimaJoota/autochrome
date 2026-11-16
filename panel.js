@@ -9,7 +9,7 @@ let ALVO, MENU, TIMER;  // referências fortes: o AppKit só guarda fracas
 
 function run(argv) {
   const D = argv[0], HTML = argv[1], MOSTRAR = argv.includes('mostrar'), TESTE = argv.includes('teste'), UTF8 = 4;
-  const VERSAO = '1.3.0', NAVS = ['Vivaldi', 'Google Chrome', 'Brave Browser', 'Microsoft Edge', 'Arc'];
+  const VERSAO = '1.4.0', NAVS = ['Vivaldi', 'Google Chrome', 'Brave Browser', 'Microsoft Edge', 'Arc'];
   const fm = $.NSFileManager.defaultManager;
   const rd = p => { const s = $.NSString.stringWithContentsOfFileEncodingError(p, UTF8, null); return s.isNil() ? '' : s.js; };
   const wr = (p, t) => $(t).writeToFileAtomicallyEncodingError(p, true, UTF8, null);
@@ -78,10 +78,13 @@ function run(argv) {
     item(MENU, 'Últimas ações');
     const ult = acoes(8);
     if (!ult.length) item(MENU, 'Nenhuma ação ainda');
-    for (const e of ult) {
-      const alvo = [e.site, e.alvo].filter(Boolean).join(' · ');
-      const txt = hm(e.t) + '  ' + e.tool + (alvo ? '  ' + alvo : '');
-      item(MENU, (e.ok ? '' : '⚠︎ ') + (txt.length > 52 ? txt.slice(0, 51) + '…' : txt), 0, {texto: true});
+    const corta = t => t.length > 72 ? t.slice(0, 71) + '…' : t;
+    for (const e of ult) {  // "12:21 Painel: tentou abrir Favoritos" e, embaixo, o motivo da falha
+      const quem = (e.chat || '').split(' — ')[0];
+      const txt = e.frase ? (quem ? quem + ': ' : '') + e.frase : e.tool + ' ' + [e.site, e.alvo].filter(Boolean).join(' · ');
+      const it = item(MENU, (e.ok ? '' : '⚠︎ ') + corta(hm(e.t) + '  ' + txt), 0, {texto: true});
+      if (e.chat) it.toolTip = e.chat;
+      if (!e.ok && e.motivo) item(MENU, corta(e.motivo), 0, {texto: true}).indentationLevel = 3;
     }
     sep(MENU);
     const modo = item(MENU, 'Modo (' + (c.show ? 'Visível' : 'Escondido') + ')', 0, {texto: true});

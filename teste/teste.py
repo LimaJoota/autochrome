@@ -32,7 +32,16 @@ def travas():
                                                                      sites=["whatsapp.com"])) == "web.whatsapp.com"
     v.log("type", {"target": "#i", "text": "ghp_" + "x" * 30}, "a.com", True, "")
     assert "•••" in open(os.path.join(v.D, "log.jsonl")).read()  # texto com cara de chave não vai ao registro
-    print("ok: travas do painel")
+    # registro em português: o que fez, onde e por que falhou, sem código
+    v.APP = "Vivaldi"
+    assert v.frase("open", {"url": "vivaldi://bookmarks/"}, "bookmarks", False, "") == "tentou abrir Favoritos"
+    assert v.motivo("O usuário está usando o Vivaldi agora: não abri") == "você estava usando o Vivaldi"
+    assert v.frase("js", {"code": "x()", "label": "agrupar as abas por site"}, "bookmarks", True, "") == \
+        "mandou agrupar as abas por site · Favoritos"
+    assert v.frase("js", {"code": "x()"}, "www.a.com", True, "") == "rodou um comando · a.com"
+    assert v.frase("click", {}, "web.whatsapp.com", True, "clicado: Enviar") == "clicou em “Enviar” · web.whatsapp.com"
+    assert "•••" in v.frase("type", {"text": "ghp_" + "x" * 30}, "a.com", True, "")
+    print("ok: travas do painel e registro em português")
 
 
 travas()
