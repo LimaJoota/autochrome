@@ -1,0 +1,16 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>teste vivaldi-controle</title>
+<button id="b" onclick="this.textContent='clicou'">clique aqui</button>
+<input id="i" placeholder="nome">
+<div id="e" contenteditable="true" style="border:1px solid #888;min-height:2em"></div>
+<input id="f" type="file" style="display:none">
+<pre id="r"></pre>
+<script>
+  document.getElementById('f').addEventListener('change', async (ev) => {
+    const f = ev.target.files[0], b = new Uint8Array(await f.arrayBuffer());
+    let s = 0; for (const x of b) s = (s + x) % 4294967296;
+    window.resultado = {nome: f.name, bytes: f.size, soma: s};
+    document.getElementById('r').textContent = JSON.stringify(window.resultado);
+  });
+</script>
