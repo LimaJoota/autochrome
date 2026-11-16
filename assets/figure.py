@@ -23,9 +23,9 @@ def browser(d, x, y, w, h, tabs=3, active=0):
 
 
 def main():
-    d = Drawing.figure("page", 94, lang="en", title="vivaldi-controle in three steps",
+    d = Drawing.figure("page", 94, lang="en", title="autochrome in three steps",
                        description="Open a tab without taking the person's tab, act on numbered elements, attach a file and stop before sending.")
-    d.text((5, 9), "vivaldi-controle in three steps", "heading")
+    d.text((5, 9), "autochrome in three steps", "heading")
     f1, f2, f3 = panels(
         d, 3, area=(5.0, 14.0, 160.0, 74.0),
         titles=["1. Open in the background", "2. Read, click, type", "3. Attach, then stop"],
@@ -49,7 +49,7 @@ def main():
     d.polyline([(px + 8, py), (px + 16, py), (px + 19, py + 3), (px + 19, py + 12), (px + 8, py + 12)], closed=True)
     d.text((px + 10, py + 8), "PDF", "label")
     hand_note(d, (px + 19, py + 6), (f3.x + 2, f3.y + 46), "the file lands in the page; send only when the person asked", 42, bend=0.25, ink="red")
-    return d.save(OUT / "vivaldi-controle.svg")
+    return d.save(OUT / "autochrome.svg")
 
 
 if __name__ == "__main__":

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Servidor MCP (stdio) que controla o Vivaldi por JXA (AppleScript em JavaScript).
+"""autochrome: servidor MCP (stdio) que controla o navegador do Mac por JXA (AppleScript em JavaScript).
 
-Precisa de: macOS, Vivaldi com "Permitir JavaScript de Apple Events" ligado e a
+Padrão: Vivaldi. Outros navegadores Chromium com AppleScript (Chrome, Brave, Edge, Arc) pelo
+argumento `browser` ou pela variável AUTOCHROME_BROWSER.
+Precisa de: macOS, "Permitir JavaScript de Apple Events" ligado no navegador e a
 permissão de Automação (Ajustes > Privacidade > Automação) para o app que chama.
 Sem dependências: só a biblioteca padrão do Python 3.9+.
 
-Uso direto, sem MCP:  python3 vivaldi_mcp.py call <ferramenta> '<json>'
+Uso direto, sem MCP:  python3 autochrome.py call <ferramenta> '<json>'
 """
 import base64
 import json
@@ -14,7 +16,8 @@ import os
 import subprocess
 import sys
 
-APP = os.environ.get("VIVALDI_APP", "Vivaldi")
+DEFAULT_APP = os.environ.get("AUTOCHROME_BROWSER", "Vivaldi")
+APP = DEFAULT_APP  # trocado a cada chamada pelo argumento `browser`
 CHUNK = 512 * 1024  # base64 por chamada; múltiplo de 4 para cada pedaço decodificar sozinho
 
 # Acha a aba pelo id; sem id, usa a aba ativa da janela da frente.
@@ -157,14 +160,17 @@ TAB = {"tab_id": {"type": "string", "description": "id da aba (de `tabs` ou `ope
 TARGET = {"target": {"type": "string", "description": "número ref de `read` ou seletor CSS"}}
 
 
+BROWSER = {"type": "string", "description": "app do navegador: Vivaldi (padrão), Google Chrome, Brave Browser, Microsoft Edge, Arc"}
+
+
 def tool(name, fn, desc, props=None, required=()):
     return name, fn, {"name": name, "description": desc, "inputSchema": {
-        "type": "object", "properties": props or {}, "required": list(required)}}
+        "type": "object", "properties": dict(props or {}, browser=BROWSER), "required": list(required)}}
 
 
 SPEC = [
-    tool("tabs", tabs, "Lista as abas do Vivaldi: id, título e URL (* = ativa)."),
-    tool("open", open_, "Abre uma URL numa aba nova do Vivaldi e devolve o id. Por padrão não troca a aba "
+    tool("tabs", tabs, "Lista as abas do navegador: id, título e URL (* = ativa)."),
+    tool("open", open_, "Abre uma URL numa aba nova e devolve o id. Por padrão não troca a aba "
          "que o usuário está vendo.", {"url": {"type": "string"}, "activate": {"type": "boolean"}}, ["url"]),
     tool("read", read, "Lê a página: título, URL, texto visível e elementos clicáveis/editáveis com número ref "
          "(inputs de arquivo aparecem mesmo escondidos).",
@@ -184,6 +190,13 @@ SPEC = [
 HANDLERS = {n: f for n, f, _ in SPEC}
 
 
+def call(name, args):
+    global APP
+    args = dict(args or {})
+    APP = args.pop("browser", None) or DEFAULT_APP
+    return HANDLERS[name](**args)
+
+
 def send(msg):
     sys.stdout.write(json.dumps(msg, ensure_ascii=False) + "\n")
     sys.stdout.flush()
@@ -199,12 +212,12 @@ def serve():
             continue
         if method == "initialize":
             res = {"protocolVersion": params.get("protocolVersion", "2024-11-05"), "capabilities": {"tools": {}},
-                   "serverInfo": {"name": "vivaldi-controle", "version": "1.0.0"}}
+                   "serverInfo": {"name": "autochrome", "version": "1.1.0"}}
         elif method == "tools/list":
             res = {"tools": [s for _, _, s in SPEC]}
         elif method == "tools/call":
             try:
-                out = HANDLERS[params["name"]](**(params.get("arguments") or {}))
+                out = call(params["name"], params.get("arguments"))
                 text = out if isinstance(out, str) else json.dumps(out, ensure_ascii=False, indent=1)
                 res = {"content": [{"type": "text", "text": text}]}
             except Exception as e:  # erro da ferramenta volta ao modelo, o servidor segue vivo
@@ -219,7 +232,7 @@ def serve():
 
 if __name__ == "__main__":
     if sys.argv[1:2] == ["call"]:
-        out = HANDLERS[sys.argv[2]](**json.loads(sys.argv[3] if len(sys.argv) > 3 else "{}"))
+        out = call(sys.argv[2], json.loads(sys.argv[3] if len(sys.argv) > 3 else "{}"))
         print(out if isinstance(out, str) else json.dumps(out, ensure_ascii=False, indent=1))
     else:
         serve()

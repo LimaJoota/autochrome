@@ -9,12 +9,12 @@ import time
 
 AQUI = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI.parent))
-import vivaldi_mcp as v  # noqa: E402
+import autochrome as v  # noqa: E402
 
 tab = v.open_((AQUI / "pagina.html").as_uri())
 try:
     pag = v.read(tab)
-    assert pag["title"] == "teste vivaldi-controle", pag
+    assert pag["title"] == "teste autochrome", pag
     refs = {linha.split(" ", 2)[2].strip('"'): linha.split(" ")[0] for linha in pag["elements"]}
 
     v.click(refs["clique aqui"], tab)
