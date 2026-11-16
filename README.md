@@ -57,6 +57,7 @@ The panel does not take the keyboard and opens no network port. It reads and wri
 
 ## Safety
 
+- `open` never opens a tab while you are using the browser: it waits up to 10 s for you to switch apps, then gives up, so a new tab never catches your typing.
 - While **Allow JavaScript from Apple Events** is on, any program on this Mac with the Automation permission for the browser can run JavaScript in your tabs, logged-in sites included. Turn it off when you do not need it.
 - `read` brings the page text into the conversation, private messages included. Point it at the tab you mean.
 - Nothing sends by itself. Sending a message is a separate click on the send button.

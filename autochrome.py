@@ -116,16 +116,22 @@ def tabs():
 
 def open_(url, activate=False):
     activate = activate or SHOW
-    return jxa("""let w=v.windows()[0]; if(!w){v.Window().make(); w=v.windows()[0];}
+    return jxa("""const BG=%s;
+      // Ele está no navegador: aba nova agora pegaria o que ele digita. Espera ele sair por até 10 s.
+      for(let i=0;BG&&i<40&&WS.frontmostApplication.localizedName.js===APPNAME;i++) delay(0.25);
+      if(BG&&WS.frontmostApplication.localizedName.js===APPNAME) throw new Error("O usuário está usando o "+APPNAME+
+        " agora: não abri a aba para não pegar o que ele digita. Tente de novo mais tarde, sem repetir em laço.");
+      let w=v.windows()[0]; if(!w){v.Window().make(); w=v.windows()[0];}
       const ids=()=>w.tabs().map(t=>t.id()), before=new Set(ids()), act=w.activeTab().id();
-      w.tabs.push(v.Tab({url:%s})); keepFocus(1.5);
+      const volta=()=>{ if(BG&&w.activeTab().id()!==act) w.activeTabIndex=ids().indexOf(act)+1; };  // a aba dele volta na hora
+      w.tabs.push(v.Tab({url:%s})); volta(); keepFocus(1.5); volta();
       // O Vivaldi põe a aba nova ao lado da ativa, não no fim: acha pela diferença de ids.
       let novos=[]; for(let i=0;i<20&&!novos.length;i++){novos=ids().filter(x=>!before.has(x)); if(!novos.length) delay(0.1);}
       if(novos.length!==1) throw new Error("não achei a aba nova com segurança ("+novos.length+" ids novos)");
       const t=tab(novos[0]);
-      for(let i=0;i<80&&t.loading();i++) delay(0.25);
-      if(!%s) w.activeTabIndex=ids().indexOf(act)+1;
-      return t.id();""" % (json.dumps(url), "true" if activate else "false"))
+      for(let i=0;i<80&&t.loading();i++){ volta(); delay(0.25); }
+      volta();
+      return t.id();""" % ("false" if activate else "true", json.dumps(url)))
 
 
 def read(tab_id=None, max_elements=150, max_text=6000):
@@ -345,7 +351,6 @@ def log(name, args, site, ok, msg):
 
 
 PANEL_TRIED = False
-AGENT = "com.github.limajoota.autochrome"
 PANEL = ["/usr/bin/osascript", "-l", "JavaScript", os.path.join(HERE, "panel.js"), D, os.path.join(HERE, "panel.html")]
 
 
@@ -374,37 +379,22 @@ def panel(show=True, force=False):
 
 
 def login():
-    """Ícone na barra a cada login: LaunchAgent do usuário, sem sudo."""
-    plist = os.path.expanduser("~/Library/LaunchAgents/%s.plist" % AGENT)
-    try:
-        with open(os.path.join(D, "panel.pid")) as f:
-            os.kill(int(f.read()), 15)  # o agente sobe outro: dois ícones não
-    except (OSError, ValueError):
-        pass
-    with open(plist, "wb") as f:
-        plistlib.dump({"Label": AGENT, "ProgramArguments": PANEL, "RunAtLoad": True}, f)
-    gui = "gui/%d" % os.getuid()
-    subprocess.run(["launchctl", "bootout", gui, plist], capture_output=True)
-    subprocess.run(["launchctl", "bootstrap", gui, plist], check=True)
-    return plist
-
-def call(name, args):
-    global APP, SHOW
-    args = dict(args or {})
-    APP = args.pop("browser", None) or DEFAULT_APP
-    show = args.pop("show", None)
-    ctl = control()
-    SHOW = ctl["show"] if show is None else show is True
-    panel(SHOW)  # o ícone fica na barra; a janela só abre no modo visível ou com `autochrome.py panel`
-    site = ""
-    try:
-        site = guard(name, args, ctl)
-        out = HANDLERS[name](**args)
-    except Exception as e:
-        log(name, args, site, False, e)
-        raise
-    log(name, args, site, True, out if name in ("open", "attach") else "")
-    return out
+    """Ícone na barra a cada login, como os outros apps: item de início com um app mínimo, sem Dock, que sobe o ícone."""
+    app = os.path.expanduser("~/Applications/autochrome.app")
+    os.makedirs(os.path.dirname(app), exist_ok=True)
+    cmd = "/usr/bin/python3 -I %s icone" % os.path.join(HERE, "autochrome.py").replace(" ", "\\ ")
+    subprocess.run(["osacompile", "-o", app, "-e", "do shell script %s" % json.dumps(cmd)], check=True)
+    info = os.path.join(app, "Contents", "Info.plist")
+    with open(info, "rb") as f:
+        d = plistlib.load(f)
+    d["LSUIElement"] = True
+    with open(info, "wb") as f:
+        plistlib.dump(d, f)
+    subprocess.run(["codesign", "-f", "-s", "-", app], check=True, capture_output=True)  # o Info.plist mudou: assina de novo
+    subprocess.run(["osascript", "-e", 'tell application "System Events" to if not (exists login item "autochrome") then '
+                    "make login item at end with properties {path:%s, hidden:true}" % json.dumps(app)], check=True)
+    panel(show=False)
+    return app
 
 
 def send(msg):
@@ -445,6 +435,8 @@ if __name__ == "__main__":
         panel(force=True)
     elif sys.argv[1:2] == ["barra"]:
         print(login())
+    elif sys.argv[1:2] == ["icone"]:
+        panel(show=False)
     elif sys.argv[1:2] == ["call"]:
         out = call(sys.argv[2], json.loads(sys.argv[3] if len(sys.argv) > 3 else "{}"))
         print(out if isinstance(out, str) else json.dumps(out, ensure_ascii=False, indent=1))
