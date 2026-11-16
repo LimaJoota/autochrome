@@ -14,7 +14,13 @@ function run(argv) {
   const rd = p => { const s = $.NSString.stringWithContentsOfFileEncodingError(p, UTF8, null); return s.isNil() ? '' : s.js; };
   const wr = (p, t) => $(t).writeToFileAtomicallyEncodingError(p, true, UTF8, null);
   fm.createDirectoryAtPathWithIntermediateDirectoriesAttributesError(D, true, $({NSFilePosixPermissions: 448}), null);
-  wr(D + '/panel.pid', String($.NSProcessInfo.processInfo.processIdentifier));
+  const EU = String($.NSProcessInfo.processInfo.processIdentifier), PID = D + '/panel.pid';
+  const vivo = n => { const t = $.NSTask.launchedTaskWithLaunchPathArguments('/bin/kill', ['-0', n]); t.waitUntilExit; return t.terminationStatus === 0; };
+  if (!TESTE) {  // um ícone só na barra: se outro painel está vivo, passa o pedido a ele e sai
+    const outro = rd(PID).trim();
+    if (/^\d+$/.test(outro) && outro !== EU && vivo(outro)) { if (MOSTRAR) wr(D + '/panel.show', ''); return; }
+    wr(PID, EU);
+  }
   const app = $.NSApplication.sharedApplication;
   app.setActivationPolicy(1);  // accessory: sem ícone no Dock
 
@@ -54,7 +60,7 @@ function run(argv) {
   };
   const sair = () => {
     $.NSStatusBar.systemStatusBar.removeStatusItem(sb);
-    fm.removeItemAtPathError(D + '/panel.pid', null);
+    if (rd(PID).trim() === EU) fm.removeItemAtPathError(PID, null);  // só apaga o registro se for o dele
     $.exit(0);
   };
 
