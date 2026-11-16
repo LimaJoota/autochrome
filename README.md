@@ -46,14 +46,16 @@ Pick per task with `show`, or set the default in the panel.
 
 ## Panel
 
-autochrome puts an icon in the menu bar (a slashed cursor while stopped). Click it to open a small floating window below it; visible mode and `python3 autochrome.py panel` open it too. `python3 autochrome.py barra` keeps the icon there at every login, and **Remove from menu bar** in the window takes it away. The window shows every action as it happens and holds the limits:
+autochrome lives in the menu bar. The icon is a cursor, slashed while stopped, and it clicks for a moment after each action. Its menu shows:
 
 - **Stop / Resume**: every call is refused until you resume.
-- **Hidden / Visible**: the default mode.
-- **Read only**: no click, type, attach or `js`.
-- **Allowed sites**: actions only on these domains (empty means all).
+- **Recent actions**: the last eight, with time, tool and site.
+- **Mode** (Hidden / Visible), **Browser** (the default one) and **Read only** (no click, type, attach or `js`).
+- **Settings…** (⌘,): a window with the same options, **Allowed sites** (actions only on these domains; empty means all) and the full log.
 
-The panel does not take the keyboard and opens no network port. It reads and writes files in `~/Library/Application Support/autochrome` (folder mode 700). It guards against mistakes; it is not a sandbox, because any program with shell access can edit those files.
+`python3 autochrome.py panel` opens Settings. `python3 autochrome.py barra` adds autochrome to your Login Items, so the icon comes back after a restart.
+
+The menu does not take the keyboard and opens no network port; Settings takes it only while you have it open. It reads and writes files in `~/Library/Application Support/autochrome` (folder mode 700). It guards against mistakes; it is not a sandbox, because any program with shell access can edit those files.
 
 ## Safety
 

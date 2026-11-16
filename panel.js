@@ -1,87 +1,150 @@
-// Ícone do autochrome na barra de menus: o clique abre logo abaixo a janela com o registro e os limites (control.json).
-// Sem porta de rede: a página fala com este script só pelo título (comandos) e por evaluateJavaScript (estado).
-// Painel que não ativa o app: fica por cima sem tirar o teclado de quem está digitando em outro lugar.
+// autochrome na barra de menus, no modelo do Escrevoz: menu nativo com o estado, as últimas ações e os atalhos;
+// os ajustes ficam na janela Configurações…, aberta só a pedido.
+// Sem porta de rede: a janela fala com este script só pelo título (comandos) e por evaluateJavaScript (estado).
 // Uso: osascript -l JavaScript panel.js <pasta de estado> <panel.html> [mostrar] [teste]
 ObjC.import('Cocoa');
 ObjC.import('WebKit');
-let ALVO;  // alvo do clique no ícone: o botão guarda referência fraca, então fica vivo aqui
+ObjC.import('stdlib');
+let ALVO, MENU, TIMER;  // referências fortes: o AppKit só guarda fracas
 
 function run(argv) {
   const D = argv[0], HTML = argv[1], MOSTRAR = argv.includes('mostrar'), TESTE = argv.includes('teste'), UTF8 = 4;
+  const VERSAO = '1.3.0', NAVS = ['Vivaldi', 'Google Chrome', 'Brave Browser', 'Microsoft Edge', 'Arc'];
   const fm = $.NSFileManager.defaultManager;
   const rd = p => { const s = $.NSString.stringWithContentsOfFileEncodingError(p, UTF8, null); return s.isNil() ? '' : s.js; };
   const wr = (p, t) => $(t).writeToFileAtomicallyEncodingError(p, true, UTF8, null);
   fm.createDirectoryAtPathWithIntermediateDirectoriesAttributesError(D, true, $({NSFilePosixPermissions: 448}), null);
   wr(D + '/panel.pid', String($.NSProcessInfo.processInfo.processIdentifier));
-
   const app = $.NSApplication.sharedApplication;
   app.setActivationPolicy(1);  // accessory: sem ícone no Dock
-  app.finishLaunching;
-  const W = 340, H = 520;
-  // 1 titled | 2 closable | 8 resizable | 16 utility | 128 nonactivating
-  const p = $.NSPanel.alloc.initWithContentRectStyleMaskBackingDefer($.NSMakeRect(0, 0, W, H), 1 | 2 | 8 | 16 | 128, 2, false);
-  p.title = 'autochrome';
-  p.level = 3;  // flutuante
-  p.hidesOnDeactivate = false;
-  p.releasedWhenClosed = false;
-  p.collectionBehavior = 1 | 256;  // todos os espaços e por cima de app em tela cheia
-  const wv = $.WKWebView.alloc.initWithFrameConfiguration(p.contentView.bounds, $.WKWebViewConfiguration.alloc.init);
-  wv.autoresizingMask = 2 | 16;
-  p.contentView.addSubview(wv);
-  wv.loadHTMLStringBaseURL($(rd(HTML)), $.NSURL.URLWithString('about:blank'));
 
+  // Estado: só estas chaves, com estes tipos; o resto que vier da janela é ignorado.
+  const ctl = () => { let o = {}; try { o = JSON.parse(rd(D + '/control.json')) || {}; } catch (e) {} return o; };
+  const grava = o => {
+    const sites = (Array.isArray(o.sites) ? o.sites : []).filter(s => typeof s === 'string' && /^[a-z0-9.-]{1,253}$/.test(s));
+    wr(D + '/control.json', JSON.stringify({stopped: o.stopped === true, show: o.show === true, read_only: o.read_only === true,
+      sites: sites.slice(0, 50), browser: NAVS.includes(o.browser) ? o.browser : ''}));
+  };
+  const muda = k => grava(Object.assign(ctl(), k));
+  const acoes = n => rd(D + '/log.jsonl').trim().split('\n').filter(Boolean).slice(-n).reverse()
+    .map(l => { try { return JSON.parse(l); } catch (e) { return null; } }).filter(Boolean);
+  const hm = t => { const d = new Date(t * 1000); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+
+  // Janela Configurações…: comum, aberta só a pedido; fechar devolve o teclado ao app de antes.
+  const W = 440, H = 600;
+  const win = $.NSWindow.alloc.initWithContentRectStyleMaskBackingDefer($.NSMakeRect(0, 0, W, H), 1 | 2 | 4, 2, false);
+  win.title = 'autochrome';
+  win.releasedWhenClosed = false;
+  win.collectionBehavior = 2 | 256;  // vem para o espaço atual, inclusive sobre app em tela cheia
+  const wv = $.WKWebView.alloc.initWithFrameConfiguration(win.contentView.bounds, $.WKWebViewConfiguration.alloc.init);
+  wv.autoresizingMask = 2 | 16;
+  win.contentView.addSubview(wv);
+  wv.loadHTMLStringBaseURL($(rd(HTML)), $.NSURL.URLWithString('about:blank'));
+  let last = '';
+  const render = () => {
+    if (!win.isVisible || wv.loading) return;
+    const s = JSON.stringify({c: rd(D + '/control.json'), l: rd(D + '/log.jsonl').trim().split('\n').slice(-40), v: VERSAO});
+    if (s !== last) { last = s; wv.evaluateJavaScriptCompletionHandler('render(' + s + ')', () => {}); }
+  };
+  const abrir = () => {
+    if (TESTE) win.setFrameOrigin($.NSMakePoint(-9000, 0)); else win.center;
+    win.makeKeyAndOrderFront(null);
+    if (!TESTE) app.activateIgnoringOtherApps(true);  // ele pediu a janela: ela pode receber o teclado
+    last = ''; render();
+  };
+  const sair = () => {
+    $.NSStatusBar.systemStatusBar.removeStatusItem(sb);
+    fm.removeItemAtPathError(D + '/panel.pid', null);
+    $.exit(0);
+  };
+
+  // Menu nativo: refeito a cada abertura (menuNeedsUpdate:).
+  const item = (menu, titulo, tag, extra) => {
+    const i = $.NSMenuItem.alloc.initWithTitleActionKeyEquivalent(titulo, tag ? 'acao:' : null, (extra && extra.atalho) || '');
+    if (tag) { i.target = ALVO; i.tag = tag; }
+    i.enabled = !!tag || !!(extra && extra.texto);
+    if (extra && extra.on) i.state = 1;
+    menu.addItem(i);
+    return i;
+  };
+  const sep = m => m.addItem($.NSMenuItem.separatorItem);
+  const monta = () => {
+    const c = ctl(), nav = c.browser || 'Vivaldi';
+    MENU.removeAllItems;
+    item(MENU, 'autochrome v' + VERSAO);
+    sep(MENU);
+    item(MENU, c.stopped ? 'Retomar o autochrome' : 'Parar o autochrome', 1);
+    sep(MENU);
+    item(MENU, 'Últimas ações');
+    const ult = acoes(8);
+    if (!ult.length) item(MENU, 'Nenhuma ação ainda');
+    for (const e of ult) {
+      const alvo = [e.site, e.alvo].filter(Boolean).join(' · ');
+      const txt = hm(e.t) + '  ' + e.tool + (alvo ? '  ' + alvo : '');
+      item(MENU, (e.ok ? '' : '⚠︎ ') + (txt.length > 52 ? txt.slice(0, 51) + '…' : txt), 0, {texto: true});
+    }
+    sep(MENU);
+    const modo = item(MENU, 'Modo (' + (c.show ? 'Visível' : 'Escondido') + ')', 0, {texto: true});
+    modo.submenu = $.NSMenu.alloc.init;
+    item(modo.submenu, 'Escondido', 2, {on: !c.show});
+    item(modo.submenu, 'Visível', 3, {on: c.show === true});
+    const navs = item(MENU, 'Navegador (' + nav + ')', 0, {texto: true});
+    navs.submenu = $.NSMenu.alloc.init;
+    NAVS.forEach((n, k) => item(navs.submenu, n, 10 + k, {on: n === nav}));
+    item(MENU, 'Só leitura', 4, {on: c.read_only === true});
+    sep(MENU);
+    item(MENU, 'Configurações…', 5, {atalho: ','});
+    sep(MENU);
+    item(MENU, 'Sair', 6, {atalho: 'q'});
+  };
+  const acao = tag => {
+    const c = ctl();
+    if (tag === 1) muda({stopped: !c.stopped});
+    else if (tag === 2 || tag === 3) muda({show: tag === 3});
+    else if (tag === 4) muda({read_only: !c.read_only});
+    else if (tag === 5) abrir();
+    else if (tag === 6) sair();
+    else if (tag >= 10) muda({browser: NAVS[tag - 10]});
+  };
+  ObjC.registerSubclass({name: 'ACAlvo', protocols: ['NSMenuDelegate', 'NSWindowDelegate'], methods: {
+    'acao:': {types: ['void', ['id']], implementation: i => acao(i.tag)},
+    'menuNeedsUpdate:': {types: ['void', ['id']], implementation: () => monta()},
+    'windowWillClose:': {types: ['void', ['id']], implementation: () => { if (!TESTE) app.hide(null); }},
+  }});
+  ALVO = $.ACAlvo.alloc.init;
+  MENU = $.NSMenu.alloc.init;
+  MENU.autoenablesItems = false;
+  MENU.delegate = ALVO;
+  win.delegate = ALVO;
   const sb = $.NSStatusBar.systemStatusBar.statusItemWithLength(-1);
   const icone = n => { const i = $.NSImage.imageWithSystemSymbolNameAccessibilityDescription(n, 'autochrome'); i.template = true; return i; };
-  sb.button.image = icone('cursorarrow.rays');
   sb.button.toolTip = 'autochrome';
-  const mostrar = () => {
-    const f = sb.button.window.frame, vf = $.NSScreen.mainScreen.visibleFrame;
-    const x = Math.max(vf.origin.x + 8, Math.min(f.origin.x + f.size.width / 2 - W / 2, vf.origin.x + vf.size.width - W - 8));
-    p.setFrameOrigin(TESTE ? $.NSMakePoint(-9000, 0) : $.NSMakePoint(x, f.origin.y - H - 6));
-    p.orderFrontRegardless;
-  };
-  const alternar = () => { if (p.isVisible) p.orderOut(null); else mostrar(); };
-  ObjC.registerSubclass({name: 'ACAlvo', methods: {'alternar:': {types: ['void', ['id']], implementation: alternar}}});
-  ALVO = $.ACAlvo.alloc.init;
-  sb.button.target = ALVO;
-  sb.button.action = 'alternar:';
-  if (MOSTRAR) mostrar();
+  sb.menu = MENU;
 
-  // Só aceita estas chaves, com estes tipos: o resto que vier da página é ignorado.
-  const apply = txt => {
-    let o; try { o = JSON.parse(txt); } catch (e) { return; }
-    const sites = (Array.isArray(o.sites) ? o.sites : []).filter(s => typeof s === 'string' && /^[a-z0-9.-]{1,253}$/.test(s));
-    wr(D + '/control.json', JSON.stringify({stopped: o.stopped === true, show: o.show === true,
-      read_only: o.read_only === true, sites: sites.slice(0, 50)}));
-  };
-
-  let seq = 0, last = '', tick = 0, parado = null, vis = p.isVisible;
-  const t0 = Date.now(), feito = new Set(), saida = [];  // teste: fora da tela, abre pelo ícone, clica em Parar, fecha e sai
+  // Ícone: cursor riscado se parado, cursor clicando logo depois de uma ação, cursor normal no resto.
+  let seq = 0, simbolo = '';
+  const t0 = Date.now(), feito = new Set(), saida = [];
   const passo = (ms, f) => { if (TESTE && Date.now() - t0 > ms && !feito.has(ms)) { feito.add(ms); f(); } };
-  while (true) {
-    const ev = app.nextEventMatchingMaskUntilDateInModeDequeue(
-      $.NSEventMaskAny, $.NSDate.dateWithTimeIntervalSinceNow(0.2), $.NSDefaultRunLoopMode, true);
-    if (!ev.isNil()) app.sendEvent(ev);
+  const tick = () => {
     const t = wv.title.isNil() ? '' : wv.title.js;
-    if (t.startsWith('q:')) break;  // "Tirar da barra"
     const m = /^c:(\d+):([\s\S]*)$/.exec(t);
-    if (m && +m[1] > seq) { seq = +m[1]; apply(m[2]); last = ''; }
-    if (fm.fileExistsAtPath(D + '/panel.show')) { fm.removeItemAtPathError(D + '/panel.show', null); mostrar(); }
-    if (vis && !p.isVisible) wr(D + '/panel.closed', String(Date.now()));  // fechada por ele: o autochrome espera 15 min para abrir sozinho
-    vis = p.isVisible;
-    passo(1000, () => { alternar(); saida.push('aberta ' + p.isVisible); });
-    passo(2500, () => wv.evaluateJavaScriptCompletionHandler("document.getElementById('stop').click()", () => {}));
-    passo(3500, () => { alternar(); saida.push('fechada ' + !p.isVisible); });
-    if (TESTE && Date.now() - t0 > 4500) break;
-    if (Date.now() - tick > 500) {
-      tick = Date.now();
-      const c = rd(D + '/control.json'), st = /"stopped":\s*true/.test(c);
-      if (st !== parado) { parado = st; sb.button.image = icone(st ? 'cursorarrow.slash' : 'cursorarrow.rays'); }
-      const s = JSON.stringify({c: c, l: rd(D + '/log.jsonl').trim().split('\n').slice(-60)});
-      if (s !== last) { last = s; wv.evaluateJavaScriptCompletionHandler('render(' + s + ')', () => {}); }
-    }
-  }
-  $.NSStatusBar.systemStatusBar.removeStatusItem(sb);
-  fm.removeItemAtPathError(D + '/panel.pid', null);
-  return saida.join(', ');
+    if (m && +m[1] > seq) { seq = +m[1]; try { grava(JSON.parse(m[2])); } catch (e) {} last = ''; }
+    if (fm.fileExistsAtPath(D + '/panel.show')) { fm.removeItemAtPathError(D + '/panel.show', null); abrir(); }
+    const a = fm.attributesOfItemAtPathError(D + '/log.jsonl', null);
+    const recente = !a.isNil() && a.fileModificationDate.timeIntervalSinceNow > -2;
+    const s = ctl().stopped === true ? 'cursorarrow.slash' : recente ? 'cursorarrow.click.2' : 'cursorarrow.rays';
+    if (s !== simbolo) { simbolo = s; sb.button.image = icone(s); }
+    render();
+    // teste: fora da tela, sem tomar o teclado
+    passo(400, () => { acao(1); saida.push('parado ' + (ctl().stopped === true)); });
+    passo(700, () => { monta(); saida.push('menu ' + MENU.numberOfItems + ' itens, 1º ' + MENU.itemAtIndex(2).title.js); });
+    passo(900, () => { acao(5); saida.push('config ' + win.isVisible); });
+    passo(2200, () => wv.evaluateJavaScriptCompletionHandler("document.getElementById('ro').click()", () => {}));
+    passo(2900, () => { acao(3); acao(11); const c = ctl();
+      saida.push('só leitura ' + (c.read_only === true) + ', visível ' + (c.show === true) + ', navegador ' + c.browser); });
+    passo(3200, () => { win.close; saida.push('fechada ' + !win.isVisible); console.log(saida.join(' | ')); sair(); });
+  };
+  TIMER = $.NSTimer.scheduledTimerWithTimeIntervalRepeatsBlock(0.25, true, tick);
+  if (MOSTRAR) abrir();
+  app.run;
 }

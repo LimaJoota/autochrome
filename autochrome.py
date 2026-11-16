@@ -21,6 +21,7 @@ import time
 import urllib.parse
 
 DEFAULT_APP = os.environ.get("AUTOCHROME_BROWSER", "Vivaldi")
+BROWSERS = ("Vivaldi", "Google Chrome", "Brave Browser", "Microsoft Edge", "Arc")  # os mesmos do menu (panel.js)
 APP = DEFAULT_APP  # trocado a cada chamada pelo argumento `browser`
 # show: aba na frente e um cursor desenhado na página indo até cada alvo. Sem show: aba de fundo, nada na tela.
 SHOW = False
@@ -295,7 +296,7 @@ def control():
         c = {}
     sites = c.get("sites") if isinstance(c.get("sites"), list) else []
     return {"stopped": c.get("stopped") is True, "show": c.get("show") is True, "read_only": c.get("read_only") is True,
-            "sites": [x for x in sites if isinstance(x, str) and x]}
+            "sites": [x for x in sites if isinstance(x, str) and x], "browser": c.get("browser") if c.get("browser") in BROWSERS else ""}
 
 
 def guard(name, args, ctl):
@@ -354,14 +355,9 @@ PANEL_TRIED = False
 PANEL = ["/usr/bin/osascript", "-l", "JavaScript", os.path.join(HERE, "panel.js"), D, os.path.join(HERE, "panel.html")]
 
 
-def panel(show=True, force=False):
-    """Sobe o ícone na barra de menus se não estiver rodando e, com show, abre a janela. Fechada por ele: espera 15 min."""
+def panel(show=False):
+    """Sobe o ícone na barra de menus se não estiver rodando; com show, abre as Configurações."""
     global PANEL_TRIED
-    try:
-        closed = os.path.getmtime(os.path.join(D, "panel.closed"))
-    except OSError:
-        closed = 0
-    show = show and (force or time.time() - closed >= 900)
     try:
         with open(os.path.join(D, "panel.pid")) as f:
             os.kill(int(f.read()), 0)
@@ -370,7 +366,7 @@ def panel(show=True, force=False):
         return
     except (OSError, ValueError):
         pass
-    if PANEL_TRIED and not force:
+    if PANEL_TRIED and not show:
         return
     PANEL_TRIED = True
     os.makedirs(D, mode=0o700, exist_ok=True)
@@ -400,11 +396,11 @@ def login():
 def call(name, args):
     global APP, SHOW
     args = dict(args or {})
-    APP = args.pop("browser", None) or DEFAULT_APP
-    show = args.pop("show", None)
     ctl = control()
+    APP = args.pop("browser", None) or ctl["browser"] or DEFAULT_APP
+    show = args.pop("show", None)
     SHOW = ctl["show"] if show is None else show is True
-    panel(SHOW)  # o ícone fica na barra; a janela só abre no modo visível ou com `autochrome.py panel`
+    panel()  # ícone na barra; as Configurações abrem só pelo menu ou com `autochrome.py panel`
     site = ""
     try:
         site = guard(name, args, ctl)
@@ -431,7 +427,7 @@ def serve():
             continue
         if method == "initialize":
             res = {"protocolVersion": params.get("protocolVersion", "2024-11-05"), "capabilities": {"tools": {}},
-                   "serverInfo": {"name": "autochrome", "version": "1.2.0"}}
+                   "serverInfo": {"name": "autochrome", "version": "1.3.0"}}
         elif method == "tools/list":
             res = {"tools": [s for _, _, s in SPEC]}
         elif method == "tools/call":
@@ -451,7 +447,7 @@ def serve():
 
 if __name__ == "__main__":
     if sys.argv[1:2] == ["panel"]:
-        panel(force=True)
+        panel(show=True)
     elif sys.argv[1:2] == ["barra"]:
         print(login())
     elif sys.argv[1:2] == ["icone"]:
