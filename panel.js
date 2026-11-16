@@ -24,6 +24,7 @@ function run(argv) {
   p.level = 3;  // flutuante
   p.hidesOnDeactivate = false;
   p.releasedWhenClosed = false;
+  p.collectionBehavior = 1 | 256;  // todos os espaços e por cima de app em tela cheia
   const wv = $.WKWebView.alloc.initWithFrameConfiguration(p.contentView.bounds, $.WKWebViewConfiguration.alloc.init);
   wv.autoresizingMask = 2 | 16;
   p.contentView.addSubview(wv);
