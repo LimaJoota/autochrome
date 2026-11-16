@@ -13,6 +13,7 @@ import base64
 import json
 import mimetypes
 import os
+import plistlib
 import re
 import subprocess
 import sys
@@ -344,30 +345,48 @@ def log(name, args, site, ok, msg):
 
 
 PANEL_TRIED = False
+AGENT = "com.github.limajoota.autochrome"
+PANEL = ["/usr/bin/osascript", "-l", "JavaScript", os.path.join(HERE, "panel.js"), D, os.path.join(HERE, "panel.html")]
 
 
-def panel(force=False):
-    """Abre a janela flutuante do painel (modo visível ou sob pedido). Fechada pelo usuário: espera 15 min."""
+def panel(show=True, force=False):
+    """Sobe o ícone na barra de menus se não estiver rodando e, com show, abre a janela. Fechada por ele: espera 15 min."""
     global PANEL_TRIED
-    if PANEL_TRIED and not force:
-        return
-    PANEL_TRIED = True
-    try:
-        with open(os.path.join(D, "panel.pid")) as f:
-            os.kill(int(f.read()), 0)
-        return
-    except (OSError, ValueError):
-        pass
     try:
         closed = os.path.getmtime(os.path.join(D, "panel.closed"))
     except OSError:
         closed = 0
-    if not force and time.time() - closed < 900:
+    show = show and (force or time.time() - closed >= 900)
+    try:
+        with open(os.path.join(D, "panel.pid")) as f:
+            os.kill(int(f.read()), 0)
+        if show:
+            open(os.path.join(D, "panel.show"), "w").close()
         return
+    except (OSError, ValueError):
+        pass
+    if PANEL_TRIED and not force:
+        return
+    PANEL_TRIED = True
     os.makedirs(D, mode=0o700, exist_ok=True)
-    subprocess.Popen(["osascript", "-l", "JavaScript", os.path.join(HERE, "panel.js"), D, os.path.join(HERE, "panel.html")],
+    subprocess.Popen(PANEL + (["mostrar"] if show else []),
                      stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
 
+
+def login():
+    """Ícone na barra a cada login: LaunchAgent do usuário, sem sudo."""
+    plist = os.path.expanduser("~/Library/LaunchAgents/%s.plist" % AGENT)
+    try:
+        with open(os.path.join(D, "panel.pid")) as f:
+            os.kill(int(f.read()), 15)  # o agente sobe outro: dois ícones não
+    except (OSError, ValueError):
+        pass
+    with open(plist, "wb") as f:
+        plistlib.dump({"Label": AGENT, "ProgramArguments": PANEL, "RunAtLoad": True}, f)
+    gui = "gui/%d" % os.getuid()
+    subprocess.run(["launchctl", "bootout", gui, plist], capture_output=True)
+    subprocess.run(["launchctl", "bootstrap", gui, plist], check=True)
+    return plist
 
 def call(name, args):
     global APP, SHOW
@@ -376,8 +395,7 @@ def call(name, args):
     show = args.pop("show", None)
     ctl = control()
     SHOW = ctl["show"] if show is None else show is True
-    if SHOW:  # escondido não abre janela nenhuma; o painel abre sob pedido com `autochrome.py panel`
-        panel()
+    panel(SHOW)  # o ícone fica na barra; a janela só abre no modo visível ou com `autochrome.py panel`
     site = ""
     try:
         site = guard(name, args, ctl)
@@ -425,6 +443,8 @@ def serve():
 if __name__ == "__main__":
     if sys.argv[1:2] == ["panel"]:
         panel(force=True)
+    elif sys.argv[1:2] == ["barra"]:
+        print(login())
     elif sys.argv[1:2] == ["call"]:
         out = call(sys.argv[2], json.loads(sys.argv[3] if len(sys.argv) > 3 else "{}"))
         print(out if isinstance(out, str) else json.dumps(out, ensure_ascii=False, indent=1))

@@ -27,6 +27,7 @@
   #log .x{overflow-wrap:anywhere}
   #log .err .x{color:var(--acc)}
   #vazio{color:var(--mut)}
+  #sair{background:none;color:var(--mut);font-size:12px;justify-self:start;padding:0}
 </style>
 <main id="m">
   <div id="top"><span id="dot"></span><span id="st">Ativo</span><button id="stop">Parar</button></div>
@@ -38,6 +39,7 @@
   </div>
   <ul id="log"></ul>
   <div id="vazio">Nenhuma ação ainda.</div>
+  <button id="sair">Tirar da barra de menus</button>
 </main>
 <script>
   // Tudo o que vem do registro é texto de página (não confiável): só textContent, nunca innerHTML.
@@ -77,5 +79,6 @@
   for (const b of el('modo').children) b.onclick = () => { cur.show = b.dataset.show === '1'; send(); };
   el('ro').onchange = () => { cur.read_only = el('ro').checked; send(); };
   el('sites').onchange = () => { cur.sites = [...new Set(el('sites').value.split(/[\s,;]+/).map(host).filter(Boolean))]; el('sites').blur(); send(); };
+  el('sair').onclick = () => { document.title = 'q:' + (++seq); };
   paint();
 </script>

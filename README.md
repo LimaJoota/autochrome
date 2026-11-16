@@ -46,7 +46,7 @@ Pick per task with `show`, or set the default in the panel.
 
 ## Panel
 
-`python3 autochrome.py panel` opens a small floating window, and visible mode opens it by itself. It shows every action as it happens and holds the limits:
+autochrome puts an icon in the menu bar (a slashed cursor while stopped). Click it to open a small floating window below it; visible mode and `python3 autochrome.py panel` open it too. `python3 autochrome.py barra` keeps the icon there at every login, and **Remove from menu bar** in the window takes it away. The window shows every action as it happens and holds the limits:
 
 - **Stop / Resume**: every call is refused until you resume.
 - **Hidden / Visible**: the default mode.
