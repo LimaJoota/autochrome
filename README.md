@@ -39,7 +39,7 @@ Every tool takes `browser` and `show`. Without MCP: `python3 autochrome.py call 
 
 ## Hidden or visible
 
-- **Hidden** (default): work happens in a background tab. The browser stays behind; if it jumps to the front anyway, autochrome hands the front back to the app you were in, so your typing does not land in the address bar.
+- **Hidden** (default): work happens in a background tab. The browser stays behind; if it jumps to the front anyway, autochrome hands the front back to the app you were in, so your typing does not land in the address bar. A small watcher keeps doing this while each action runs and for 4 s after it, because a page that downloads a file or opens a window brings the browser forward later. If you click the browser yourself, it lets you.
 - **Visible** (`show: true`): the tab comes to the front and a drawn pointer glides to each element before the click or the typing. Your real mouse is never moved.
 
 Pick per task with `show`, or set the default in the panel.

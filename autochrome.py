@@ -473,6 +473,21 @@ def login():
     return app
 
 
+def vigia(name):
+    """Modo escondido: uma página que baixa arquivo ou abre janela traz o navegador para a frente depois que o
+    osascript da ação já saiu (Gmail, 16/11/2026: "NAO QUERO NINGUEM MEXENDO NA MINHA TELA"). Sobe o vigia.js à
+    parte, espera ele guardar o app da frente e devolve a marca que o encerra."""
+    if SHOW or name in ("tabs", "read"):
+        return None
+    os.makedirs(D, mode=0o700, exist_ok=True)
+    marca = os.path.join(D, "vigia.%d.%d" % (os.getpid(), time.time_ns()))
+    open(marca, "w").close()
+    p = subprocess.Popen(["/usr/bin/osascript", "-l", "JavaScript", os.path.join(HERE, "vigia.js"), APP, marca],
+                         stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+    p.stdout.readline()  # "ok" ou "-" (ele está no navegador); vazio se o osascript falhar: a ação segue igual
+    return marca
+
+
 def call(name, args):
     global APP, SHOW
     args = dict(args or {})
@@ -481,13 +496,17 @@ def call(name, args):
     show = args.pop("show", None)
     SHOW = ctl["show"] if show is None else show is True
     panel()  # ícone na barra; as Configurações abrem só pelo menu ou com `autochrome.py panel`
-    site = ""
+    site, marca = "", None
     try:
         site = guard(name, args, ctl)
+        marca = vigia(name)
         out = HANDLERS[name](**{k: v for k, v in args.items() if k != "label"})
     except Exception as e:
         log(name, args, site, False, e)
         raise
+    finally:
+        if marca:
+            os.unlink(marca)  # a vigia segue mais 4 s e sai sozinha
     log(name, args, site, True, out if name in ("open", "attach", "click") else "")
     return out
 
