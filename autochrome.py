@@ -397,6 +397,25 @@ def login():
     return app
 
 
+def call(name, args):
+    global APP, SHOW
+    args = dict(args or {})
+    APP = args.pop("browser", None) or DEFAULT_APP
+    show = args.pop("show", None)
+    ctl = control()
+    SHOW = ctl["show"] if show is None else show is True
+    panel(SHOW)  # o ícone fica na barra; a janela só abre no modo visível ou com `autochrome.py panel`
+    site = ""
+    try:
+        site = guard(name, args, ctl)
+        out = HANDLERS[name](**args)
+    except Exception as e:
+        log(name, args, site, False, e)
+        raise
+    log(name, args, site, True, out if name in ("open", "attach") else "")
+    return out
+
+
 def send(msg):
     sys.stdout.write(json.dumps(msg, ensure_ascii=False) + "\n")
     sys.stdout.flush()
