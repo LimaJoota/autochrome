@@ -31,17 +31,38 @@ Then, in the browser, turn on **Allow JavaScript from Apple Events** (Vivaldi: S
 | `read` | Title, URL, visible text and numbered elements you can click or type into. File inputs show up even when hidden. |
 | `click` | Clicks by number from `read` or by CSS selector. |
 | `type` | Types into an input, textarea or editable field. `clear` and `enter` are optional. |
-| `attach` | Puts a local file into a file input, or drops it on a drop area. |
-| `js` | Runs JavaScript in the tab (function body, use `return`). |
+| `attach` | Puts a local file into a file input, drops it on a drop area, or pastes it into a field (`paste`, used by WhatsApp Web). |
+| `js` | Runs JavaScript in the tab (async function body: `return`, and `await` if needed). |
 | `close` | Closes a tab by id. |
 
-Every tool takes `browser`. Without MCP: `python3 autochrome.py call read '{"tab_id":"123"}'`.
+Every tool takes `browser` and `show`. Without MCP: `python3 autochrome.py call read '{"tab_id":"123"}'`.
+
+## Hidden or visible
+
+- **Hidden** (default): work happens in a background tab. The browser stays behind; if it jumps to the front anyway, autochrome hands the front back to the app you were in, so your typing does not land in the address bar.
+- **Visible** (`show: true`): the tab comes to the front and a drawn pointer glides to each element before the click or the typing. Your real mouse is never moved.
+
+Pick per task with `show`, or set the default in the panel.
+
+## Panel
+
+`python3 autochrome.py panel` opens a small floating window, and visible mode opens it by itself. It shows every action as it happens and holds the limits:
+
+- **Stop / Resume**: every call is refused until you resume.
+- **Hidden / Visible**: the default mode.
+- **Read only**: no click, type, attach or `js`.
+- **Allowed sites**: actions only on these domains (empty means all).
+
+The panel does not take the keyboard and opens no network port. It reads and writes files in `~/Library/Application Support/autochrome` (folder mode 700). It guards against mistakes; it is not a sandbox, because any program with shell access can edit those files.
 
 ## Safety
 
 - While **Allow JavaScript from Apple Events** is on, any program on this Mac with the Automation permission for the browser can run JavaScript in your tabs, logged-in sites included. Turn it off when you do not need it.
 - `read` brings the page text into the conversation, private messages included. Point it at the tab you mean.
 - Nothing sends by itself. Sending a message is a separate click on the send button.
+- `click`, `type`, `attach` and `js` need a `tab_id`, so they never act on the tab you happen to be looking at.
+- `attach` refuses keys and credentials (`~/.ssh`, `.env`, `*.pem`, keychains and similar).
+- `read` marks page text as data, not instructions. The log keeps no page text and masks anything typed that looks like a key.
 - `close` closes whatever tab id you give it. Tab ids come from `tabs` or `open`.
 - A call to a browser that is not running opens it.
 
@@ -58,7 +79,7 @@ Every tool takes `browser`. Without MCP: `python3 autochrome.py call read '{"tab
 python3 teste/teste.py
 ```
 
-Opens a local page in a background tab, clicks, types, attaches a 1.2 MB file, checks it byte for byte and closes the tab.
+Checks the panel limits without a browser, then opens a local page in a background tab, clicks, types, attaches a 1.2 MB file (file input and paste), checks it byte for byte and closes the tab.
 
 ## Status
 

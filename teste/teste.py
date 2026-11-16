@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Teste de ponta a ponta no Vivaldi aberto: abre a página local numa aba de fundo,
-clica, digita, anexa um arquivo de 1,2 MB e fecha a aba. Não manda nada a ninguém."""
+clica, digita, anexa um arquivo de 1,2 MB (input e paste) e fecha a aba. Antes, confere as travas
+do painel sem navegador. Não manda nada a ninguém e não traz o navegador para a frente."""
 import os
 import pathlib
 import sys
@@ -11,6 +12,30 @@ AQUI = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI.parent))
 import autochrome as v  # noqa: E402
 
+
+def travas():
+    """Limites do painel numa pasta temporária: parado, só leitura, sem tab_id, arquivo sensível, site fora."""
+    v.D = tempfile.mkdtemp()
+    def recusa(nome, args, ctl, trecho):
+        try:
+            v.guard(nome, args, dict(dict(stopped=False, show=False, read_only=False, sites=[]), **ctl))
+        except RuntimeError as e:
+            assert trecho in str(e), e
+            return
+        raise AssertionError("passou: %s %s" % (nome, ctl))
+    recusa("tabs", {}, {"stopped": True}, "PARADO")
+    recusa("click", {"tab_id": "1", "target": "1"}, {"read_only": True}, "só leitura")
+    recusa("click", {"target": "1"}, {}, "tab_id")
+    recusa("attach", {"tab_id": "1", "path": "~/.ssh/id_ed25519"}, {}, "sensível")
+    recusa("open", {"url": "https://evil.example/x"}, {"sites": ["whatsapp.com"]}, "fora da lista")
+    assert v.guard("open", {"url": "https://web.whatsapp.com/"}, dict(stopped=False, show=False, read_only=False,
+                                                                     sites=["whatsapp.com"])) == "web.whatsapp.com"
+    v.log("type", {"target": "#i", "text": "ghp_" + "x" * 30}, "a.com", True, "")
+    assert "•••" in open(os.path.join(v.D, "log.jsonl")).read()  # texto com cara de chave não vai ao registro
+    print("ok: travas do painel")
+
+
+travas()
 tab = v.open_((AQUI / "pagina.html").as_uri())
 try:
     pag = v.read(tab)
@@ -37,8 +62,12 @@ try:
                 break
             time.sleep(0.25)
         assert res == {"nome": os.path.basename(f.name), "bytes": len(dados), "soma": sum(dados) % 2**32}, res
+        v.attach(f.name, "#e", tab, paste=True)  # WhatsApp Web: colar no campo de mensagem
+        res = v.js("const t=document.getElementById('p').textContent;return t?JSON.parse(t):null", tab)
+        assert res == {"nome": os.path.basename(f.name), "bytes": len(dados)}, res
     finally:
         os.unlink(f.name)
-    print("ok: abrir, ler, clicar, digitar e anexar")
+    assert v.js("await new Promise(r=>setTimeout(r,50)); return 2+2", tab) == 4  # js com await
+    print("ok: abrir, ler, clicar, digitar, anexar (input e paste) e js com await")
 finally:
     v.close(tab)

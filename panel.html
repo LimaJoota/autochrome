@@ -1,0 +1,81 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>autochrome</title>
+<style>
+  :root{--bg:#fff;--fg:#1d1d1f;--mut:#6e6e73;--line:#e5e5ea;--soft:#f2f2f4;--acc:#c2410c;--ok:#1f7a3d;color-scheme:light dark}
+  @media (prefers-color-scheme:dark){:root{--bg:#1e1e20;--fg:#f2f2f7;--mut:#9a9aa0;--line:#333336;--soft:#2a2a2d;--acc:#ff7a3d;--ok:#4cc26b}}
+  *{box-sizing:border-box}
+  body{margin:0;font:13px/1.4 -apple-system,system-ui,sans-serif;background:var(--bg);color:var(--fg);-webkit-user-select:none;cursor:default}
+  main{padding:14px;display:grid;gap:14px}
+  #top{display:flex;align-items:center;gap:10px}
+  #dot{width:10px;height:10px;border-radius:50%;background:var(--ok);transition:background .2s}
+  #st{flex:1;font-size:17px;font-weight:600}
+  button{font:inherit;color:inherit;border:0;cursor:pointer}
+  button:active{transform:scale(.97)}
+  #stop{font-size:14px;font-weight:600;padding:9px 20px;border-radius:8px;background:var(--acc);color:#fff;transition:background .2s}
+  .parado #dot{background:var(--acc)}
+  .parado #stop{background:var(--ok)}
+  .seg{display:grid;grid-template-columns:1fr 1fr;background:var(--soft);border-radius:8px;padding:2px}
+  .seg button{background:none;padding:6px;border-radius:6px}
+  .seg button.on{background:var(--bg);font-weight:600;box-shadow:0 1px 2px #0003}
+  label{display:flex;gap:8px;align-items:center}
+  .lim{display:grid;gap:4px;color:var(--mut)}
+  textarea{width:100%;height:48px;resize:vertical;font:inherit;color:var(--fg);background:var(--soft);border:0;border-radius:6px;padding:6px 8px;-webkit-user-select:text}
+  #log{list-style:none;margin:0;padding:0;font-variant-numeric:tabular-nums}
+  #log li{display:grid;grid-template-columns:40px 44px 1fr;gap:6px;padding:5px 0;border-top:1px solid var(--line)}
+  #log .h,#log .k{color:var(--mut)}
+  #log .x{overflow-wrap:anywhere}
+  #log .err .x{color:var(--acc)}
+  #vazio{color:var(--mut)}
+</style>
+<main id="m">
+  <div id="top"><span id="dot"></span><span id="st">Ativo</span><button id="stop">Parar</button></div>
+  <div class="seg" id="modo"><button data-show="0">Escondido</button><button data-show="1">Visível</button></div>
+  <label><input type="checkbox" id="ro"> Só leitura: sem clicar, digitar, anexar nem js</label>
+  <div class="lim">
+    <label for="sites">Sites permitidos (vazio: todos)</label>
+    <textarea id="sites" placeholder="web.whatsapp.com"></textarea>
+  </div>
+  <ul id="log"></ul>
+  <div id="vazio">Nenhuma ação ainda.</div>
+</main>
+<script>
+  // Tudo o que vem do registro é texto de página (não confiável): só textContent, nunca innerHTML.
+  const el = id => document.getElementById(id);
+  let cur = {stopped: false, show: false, read_only: false, sites: []}, seq = 0;
+  const send = () => { document.title = 'c:' + (++seq) + ':' + JSON.stringify(cur); paint(); };
+  const host = s => s.trim().toLowerCase().replace(/^[a-z]+:\/\//, '').replace(/[\/?#:].*$/, '').replace(/^(\*\.|www\.)/, '');
+
+  function paint() {
+    el('m').classList.toggle('parado', cur.stopped);
+    el('st').textContent = cur.stopped ? 'Parado' : 'Ativo';
+    el('stop').textContent = cur.stopped ? 'Retomar' : 'Parar';
+    for (const b of el('modo').children) b.classList.toggle('on', (b.dataset.show === '1') === cur.show);
+    el('ro').checked = cur.read_only;
+    if (document.activeElement !== el('sites')) el('sites').value = cur.sites.join('\n');
+  }
+
+  function render(s) {
+    try { if (s.c) Object.assign(cur, JSON.parse(s.c)); } catch (e) {}
+    paint();
+    const ul = el('log'); ul.textContent = '';
+    const linhas = (s.l || []).filter(Boolean).reverse();
+    el('vazio').hidden = linhas.length > 0;
+    for (const ln of linhas) {
+      let e; try { e = JSON.parse(ln); } catch (x) { continue; }
+      const li = document.createElement('li'); if (!e.ok) li.className = 'err';
+      const d = new Date(e.t * 1000), hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      const txt = [e.site, e.alvo].filter(Boolean).join(' · ') + (e.ok ? '' : ' — ' + e.msg);
+      for (const [c, t] of [['h', hm], ['k', e.tool], ['x', txt]]) {
+        const sp = document.createElement('span'); sp.className = c; sp.textContent = t; li.appendChild(sp);
+      }
+      ul.appendChild(li);
+    }
+  }
+
+  el('stop').onclick = () => { cur.stopped = !cur.stopped; send(); };
+  for (const b of el('modo').children) b.onclick = () => { cur.show = b.dataset.show === '1'; send(); };
+  el('ro').onchange = () => { cur.read_only = el('ro').checked; send(); };
+  el('sites').onchange = () => { cur.sites = [...new Set(el('sites').value.split(/[\s,;]+/).map(host).filter(Boolean))]; el('sites').blur(); send(); };
+  paint();
+</script>

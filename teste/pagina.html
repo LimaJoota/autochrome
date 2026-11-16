@@ -6,11 +6,16 @@
 <div id="e" contenteditable="true" style="border:1px solid #888;min-height:2em"></div>
 <input id="f" type="file" style="display:none">
 <pre id="r"></pre>
+<pre id="p"></pre>
 <script>
   document.getElementById('f').addEventListener('change', async (ev) => {
     const f = ev.target.files[0], b = new Uint8Array(await f.arrayBuffer());
     let s = 0; for (const x of b) s = (s + x) % 4294967296;
     window.resultado = {nome: f.name, bytes: f.size, soma: s};
     document.getElementById('r').textContent = JSON.stringify(window.resultado);
+  });
+  document.getElementById('e').addEventListener('paste', (ev) => {
+    const f = ev.clipboardData.files[0];
+    if (f) { ev.preventDefault(); document.getElementById('p').textContent = JSON.stringify({nome: f.name, bytes: f.size}); }
   });
 </script>
