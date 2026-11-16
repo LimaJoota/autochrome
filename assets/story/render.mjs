@@ -1,4 +1,4 @@
-// Grava story.html em MP4 1080x1920: Chromium sem janela (fala por pipe, sem porta) → PNG por quadro → ffmpeg.
+// Grava story.html em MP4 (1080x1920 ou o tamanho pedido): Chromium sem janela (fala por pipe, sem porta) → PNG por quadro → ffmpeg.
 // Uso: node render.mjs story.html saida.mp4 [segundos=15] [fps=30]
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -6,7 +6,8 @@ import { tmpdir, homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const [html, saida, segs = '15', fps = '30'] = process.argv.slice(2);
+const [html, saida, segs = '15', fps = '30', tam = '1080x1920'] = process.argv.slice(2);
+const [W, H] = tam.split('x').map(Number);  // 1280x640: versão deitada do GitHub
 const CHROME = process.env.CHROME || join(homedir(),
   'Library/Caches/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-mac-arm64/chrome-headless-shell');
 const perfil = mkdtempSync(join(tmpdir(), 'story-'));
@@ -30,7 +31,7 @@ const send = (method, params = {}, sessionId) => new Promise((ok, falha) => {
 
 const { targetInfos } = await send('Target.getTargets');
 const { sessionId: s } = await send('Target.attachToTarget', { targetId: targetInfos.find(t => t.type === 'page').targetId, flatten: true });
-await send('Emulation.setDeviceMetricsOverride', { width: 1080, height: 1920, deviceScaleFactor: 1, mobile: false }, s);
+await send('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile: false }, s);
 await send('Page.navigate', { url: pathToFileURL(resolve(html)).href }, s);
 await new Promise(r => setTimeout(r, 1500));  // fontes
 await send('Runtime.evaluate', { expression: 'document.fonts.ready', awaitPromise: true }, s);
