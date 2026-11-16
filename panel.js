@@ -49,7 +49,7 @@ function run(argv) {
   const abrir = () => {
     if (TESTE) win.setFrameOrigin($.NSMakePoint(-9000, 0)); else win.center;
     win.makeKeyAndOrderFront(null);
-    if (!TESTE) app.activateIgnoringOtherApps(true);  // ele pediu a janela: ela pode receber o teclado
+    if (!TESTE) { app.unhide(null); app.activateIgnoringOtherApps(true); }  // ele pediu a janela: ela pode receber o teclado
     last = ''; render();
   };
   const sair = () => {
@@ -107,7 +107,7 @@ function run(argv) {
     else if (tag >= 10) muda({browser: NAVS[tag - 10]});
   };
   ObjC.registerSubclass({name: 'ACAlvo', protocols: ['NSMenuDelegate', 'NSWindowDelegate'], methods: {
-    'acao:': {types: ['void', ['id']], implementation: i => acao(i.tag)},
+    'acao:': {types: ['void', ['id']], implementation: i => acao(Number(i.tag))},  // a ponte do JXA entrega o tag como texto,
     'menuNeedsUpdate:': {types: ['void', ['id']], implementation: () => monta()},
     'windowWillClose:': {types: ['void', ['id']], implementation: () => { if (!TESTE) app.hide(null); }},
   }});
@@ -124,6 +124,10 @@ function run(argv) {
   // Ícone: cursor riscado se parado, cursor clicando logo depois de uma ação, cursor normal no resto.
   let seq = 0, simbolo = '';
   const t0 = Date.now(), feito = new Set(), saida = [];
+  // clica no item como o usuário: pelo target/action do menu (ou submenu), não chamando acao() direto
+  const clica = t => { monta(); for (let k = 0; k < MENU.numberOfItems; k++) { const it = MENU.itemAtIndex(k), sub = it.submenu;
+    const m = it.title.js === t ? MENU : !sub.isNil() && sub.indexOfItemWithTitle(t) >= 0 ? sub : null;
+    if (m) return m.performActionForItemAtIndex(m.indexOfItemWithTitle(t)); } };
   const passo = (ms, f) => { if (TESTE && Date.now() - t0 > ms && !feito.has(ms)) { feito.add(ms); f(); } };
   const tick = () => {
     const t = wv.title.isNil() ? '' : wv.title.js;
@@ -136,11 +140,11 @@ function run(argv) {
     if (s !== simbolo) { simbolo = s; sb.button.image = icone(s); }
     render();
     // teste: fora da tela, sem tomar o teclado
-    passo(400, () => { acao(1); saida.push('parado ' + (ctl().stopped === true)); });
+    passo(400, () => { clica('Parar o autochrome'); saida.push('parado ' + (ctl().stopped === true)); });
     passo(700, () => { monta(); saida.push('menu ' + MENU.numberOfItems + ' itens, 1º ' + MENU.itemAtIndex(2).title.js); });
-    passo(900, () => { acao(5); saida.push('config ' + win.isVisible); });
+    passo(900, () => { clica('Configurações…'); saida.push('config ' + win.isVisible); });
     passo(2200, () => wv.evaluateJavaScriptCompletionHandler("document.getElementById('ro').click()", () => {}));
-    passo(2900, () => { acao(3); acao(11); const c = ctl();
+    passo(2900, () => { clica('Visível'); clica('Google Chrome'); const c = ctl();
       saida.push('só leitura ' + (c.read_only === true) + ', visível ' + (c.show === true) + ', navegador ' + c.browser); });
     passo(3200, () => { win.close; saida.push('fechada ' + !win.isVisible); console.log(saida.join(' | ')); sair(); });
   };
