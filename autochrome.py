@@ -245,7 +245,7 @@ def js(code, tab_id=None):
     return page(tab_id, "return (async()=>{%s})();" % code)  # aceita await
 
 
-def ask(text, options=None, wait=60, key=""):
+def ask(text, options=None, wait=60, key="", items=None):
     """Aviso no painel (canto da tela, sem tomar o teclado). O painel grava <nome>.resposta com o botão clicado."""
     opts = [" ".join(str(o).split())[:24] for o in (options or []) if str(o).strip()][:3] or ["Pode", "Agora não"]
     pasta = os.path.join(D, "pedidos")
@@ -254,7 +254,10 @@ def ask(text, options=None, wait=60, key=""):
     p, r = os.path.join(pasta, nome + ".json"), os.path.join(pasta, nome + ".resposta")
     if not os.path.exists(p) and not os.path.exists(r):  # mesma key já na tela: não repete o aviso
         with open(p + ".tmp", "w") as f:
-            json.dump({"chat": chat(), "text": "\n".join(" ".join(l.split()) for l in str(text).splitlines() if l.strip())[:400], "options": opts, "t": time.time()},
+            its = [{c: " ".join(str(i.get(c, "")).split())[:40] for c in ("aba", "site", "pilha")}
+               for i in (items if isinstance(items, list) else []) if isinstance(i, dict)][:4]
+        json.dump({"chat": chat(), "text": "\n".join(" ".join(l.split()) for l in str(text).splitlines() if l.strip())[:400],
+                   "options": opts, "items": its, "t": time.time()},
                       f, ensure_ascii=False)
         os.replace(p + ".tmp", p)  # o painel nunca lê meio arquivo
     fim = time.time() + max(0.0, min(float(wait), 3600.0))
@@ -320,7 +323,9 @@ SPEC = [
          {"text": {"type": "string", "description": "comece pelo que você quer fazer, em palavras simples, e diga o porquê; uma linha por item, sem título cortado"},
           "options": {"type": "array", "items": {"type": "string"}, "description": "botões; padrão Pode e Agora não"},
           "wait": {"type": "integer", "description": "segundos esperando o clique (0 a 3600, padrão 60)"},
-          "key": {"type": "string", "description": "nome fixo do pedido, para não repetir o aviso"}}, ["text"]),
+          "key": {"type": "string", "description": "nome fixo do pedido, para não repetir o aviso"},
+          "items": {"type": "array", "items": {"type": "object"}, "description": "até 4 abas desenhadas como caixas: "
+                    "{aba, site, pilha}; a aba aparece como no navegador, com seta para a pilha (sem pilha: fica solta)"}}, ["text"]),
 ]
 HANDLERS = {n: f for n, f, _ in SPEC}
 

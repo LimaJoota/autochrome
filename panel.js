@@ -117,9 +117,27 @@ function run(argv) {
     v.addSubview(caixa(r, fundo, 13)); v.addSubview(b);
     return x - w - 6;
   };
+  const simb = (nome, cor, r) => { const i = $.NSImageView.imageViewWithImage($.NSImage.imageWithSystemSymbolNameAccessibilityDescription(nome, ''));
+    i.contentTintColor = cor; i.frame = r; return i; };
+  const linha1 = (t, tam, cor, peso, r) => { const l = rotulo(t, tam, cor, peso); l.maximumNumberOfLines = 1; l.lineBreakMode = 4; l.frame = r; return l; };
+  // Cada item: a aba como no navegador (caixa cinza com título e site) → a pilha (caixa na cor do aviso). 17/11: "colocar ... dentro
+  // de uma caixa e aí ... contas dentro de outra caixa, igual o navegador".
+  const caixaItem = (v, k, it, y, W) => {
+    const M = 16, AW = Math.round(W * 0.58), SX = M + AW + 24, SW = W - AW - 24, H = 36;
+    v.addSubview(caixa($.NSMakeRect(M, y, AW, H), k.lavado, 8, k.linha));
+    v.addSubview(simb('globe', rgb(k.t.apagado), $.NSMakeRect(M + 8, y + 11, 14, 14)));
+    v.addSubview(linha1(String(it.aba || 'Aba'), 12, rgb(k.t.texto), 0.23, $.NSMakeRect(M + 28, y + 17, AW - 34, 15)));
+    v.addSubview(linha1(String(it.site || ''), 10.5, rgb(k.t.apagado), 0, $.NSMakeRect(M + 28, y + 4, AW - 34, 13)));
+    v.addSubview(simb('arrow.right', rgb(k.t.apagado), $.NSMakeRect(M + AW + 5, y + 11, 14, 14)));
+    const tem = !!it.pilha, cor = tem ? k.acc : rgb(k.t.apagado);
+    v.addSubview(caixa($.NSMakeRect(SX, y, SW, H), tem ? k.suave : $.NSColor.clearColor, 8, tem ? k.acc.colorWithAlphaComponent(0.55) : k.linha));
+    v.addSubview(simb(tem ? 'square.stack.fill' : 'square.dashed', cor, $.NSMakeRect(SX + 8, y + 11, 14, 14)));
+    v.addSubview(linha1(tem ? String(it.pilha) : 'fica solta', 12, tem ? rgb(k.t.texto) : cor, 0.23, $.NSMakeRect(SX + 27, y + 10, SW - 32, 15)));
+  };
   const mostra = (p, total, c) => {
-    const k = cores(c), M = 16, txt = rotulo(String(p.text), 13, rgb(k.t.texto));
-    const th = Math.ceil(txt.cell.cellSizeForBounds($.NSMakeRect(0, 0, PW - 2 * M, 2000)).height), H = th + 86;
+    const k = cores(c), M = 16, txt = rotulo(String(p.text), 13, rgb(k.t.texto)), its = (p.items || []).slice(0, 4);
+    const IH = its.length ? its.length * 42 + 4 : 0;
+    const th = Math.ceil(txt.cell.cellSizeForBounds($.NSMakeRect(0, 0, PW - 2 * M, 2000)).height), H = th + 86 + IH;
     const v = $.NSView.alloc.initWithFrame($.NSMakeRect(0, 0, PW, H));
     v.addSubview(caixa($.NSMakeRect(0, 0, PW, H), rgb(k.t.fundo), 16, k.linha));  // o cartão: a janela por baixo é transparente
     const ic = $.NSImageView.imageViewWithImage($.NSImage.imageWithSystemSymbolNameAccessibilityDescription('cursorarrow.rays', 'autochrome'));
@@ -131,6 +149,7 @@ function run(argv) {
     if (total > 1) { const n = rotulo('1 de ' + total, 11.5, rgb(k.t.apagado)); n.alignment = 1; n.frame = $.NSMakeRect(PW - M - 50, H - 31, 50, 16); v.addSubview(n); }
     txt.frame = $.NSMakeRect(M, H - 40 - th, PW - 2 * M, th);
     v.addSubview(txt);
+    its.forEach((it, n) => caixaItem(v, k, it, H - 40 - th - 10 - 36 - n * 42, PW - 2 * M));
     let x = PW - M;
     p.options.slice(0, 3).forEach((o, n) => { x = botao(v, String(o), n, x, n ? k.lavado : k.suave, n ? rgb(k.t.texto) : k.acc); });
     pop.contentView = v;
@@ -256,7 +275,8 @@ function run(argv) {
     passo(700, () => { monta(); saida.push('menu ' + MENU.numberOfItems + ' itens, 1º ' + MENU.itemAtIndex(2).title.js); });
     passo(900, () => { clica('Configurações…'); saida.push('config ' + win.isVisible); });
     passo(1000, () => { fm.createDirectoryAtPathWithIntermediateDirectoriesAttributesError(PD, true, $(), null);
-      wr(PD + '/t1.json', JSON.stringify({chat: 'Mac — organização', text: '1 aba nova fora das pilhas do Vivaldi:\n• LimaJoota (github.com) → pilha Contas\nPosso colocar na pilha indicada? Nenhuma aba é fechada.',
+      wr(PD + '/t1.json', JSON.stringify({chat: 'Mac — organização', text: 'Posso guardar as abas novas nas pilhas do Vivaldi? Nenhuma aba é fechada.',
+        items: [{aba: 'LimaJoota', site: 'github.com', pilha: 'Contas'}, {aba: 'Notícias do dia', site: 'g1.globo.com', pilha: ''}],
         options: ['Pode', 'Agora não'], t: Date.now() / 1000}));
       wr(PD + '/t2.json', JSON.stringify({chat: 'Site — desenvolvimento', text: 'Segundo pedido.', options: ['Ok'], t: Date.now() / 1000 + 1})); });
     passo(1700, () => { const v = pop.contentView, r = v.bitmapImageRepForCachingDisplayInRect(v.bounds);
