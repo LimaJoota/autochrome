@@ -1,4 +1,4 @@
-"""README figure: open in the background, read and act by ref, attach a file and stop before sending."""
+"""README figure: open in the background, read and act by ref, attach a file and ask before sending."""
 
 import os
 import sys
@@ -24,11 +24,11 @@ def browser(d, x, y, w, h, tabs=3, active=0):
 
 def main():
     d = Drawing.figure("page", 94, lang="en", title="autochrome in three steps",
-                       description="Open a tab without taking the person's tab, act on numbered elements, attach a file and stop before sending.")
+                       description="Open a tab without taking the person's tab, act on numbered elements, attach a file and ask in a corner window before sending.")
     d.text((5, 9), "autochrome in three steps", "heading")
     f1, f2, f3 = panels(
         d, 3, area=(5.0, 14.0, 160.0, 74.0),
-        titles=["1. Open in the background", "2. Read, click, type", "3. Attach, then stop"],
+        titles=["1. Open in the background", "2. Read, click, type", "3. Attach, then ask"],
         verdicts=[True, True, None], colored=True, arrows=True, gap=10.0,
     )
 
@@ -44,11 +44,16 @@ def main():
         d.text((px + w + 2, py + i * 4.5 + 2.4), str(i + 1), "label")
     hand_note(d, (px + 14, py + 10.5), (f2.x + 2, f2.y + 46), "read numbers what you can click or type into", 42, bend=-0.2)
 
-    # 3: the file goes into the page's file input; sending is the person's call.
+    # 3: the file goes into the page; a corner window asks before sending and leaves the keyboard alone.
     px, py = browser(d, f3.x + 5, sy, 38, 26)
-    d.polyline([(px + 8, py), (px + 16, py), (px + 19, py + 3), (px + 19, py + 12), (px + 8, py + 12)], closed=True)
-    d.text((px + 10, py + 8), "PDF", "label")
-    hand_note(d, (px + 19, py + 6), (f3.x + 2, f3.y + 46), "the file lands in the page; send only when the person asked", 42, bend=0.25, ink="red")
+    d.polyline([(px, py), (px + 7, py), (px + 10, py + 3), (px + 10, py + 12), (px, py + 12)], closed=True)
+    d.text((px + 1.5, py + 8), "PDF", "label")
+    ax, ay = f3.x + 19.5, sy + 13
+    d.rect(ax, ay, 21, 11, fill="#fff")
+    d.text((ax + 2, ay + 4), "Send it?", "label")
+    d.rect(ax + 2, ay + 6.5, 8, 3)
+    d.rect(ax + 11, ay + 6.5, 8, 3, fill="#000")
+    hand_note(d, (ax + 15, ay + 9.5), (f3.x + 2, f3.y + 46), "a corner window asks first; the keyboard stays where it is", 42, bend=0.25, ink="red")
     return d.save(OUT / "autochrome.svg")
 
 

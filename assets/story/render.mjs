@@ -1,12 +1,12 @@
 // Grava story.html em MP4 (1080x1920 ou o tamanho pedido): Chromium sem janela (fala por pipe, sem porta) → PNG por quadro → ffmpeg.
-// Uso: node render.mjs story.html saida.mp4 [segundos=15] [fps=30]
+// Uso: node render.mjs story.html saida.mp4 [segundos=22] [fps=30] [1080x1920]. QUADROS=5,12 grava só esses instantes em PNG (conferência).
 import { spawn } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const [html, saida, segs = '15', fps = '30', tam = '1080x1920'] = process.argv.slice(2);
+const [html, saida, segs = '22', fps = '30', tam = '1080x1920'] = process.argv.slice(2);
 const [W, H] = tam.split('x').map(Number);  // 1280x640: versão deitada do GitHub
 const CHROME = process.env.CHROME || join(homedir(),
   'Library/Caches/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-mac-arm64/chrome-headless-shell');
@@ -32,10 +32,21 @@ const send = (method, params = {}, sessionId) => new Promise((ok, falha) => {
 const { targetInfos } = await send('Target.getTargets');
 const { sessionId: s } = await send('Target.attachToTarget', { targetId: targetInfos.find(t => t.type === 'page').targetId, flatten: true });
 await send('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile: false }, s);
+await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] }, s);  // o painel real abre escuro; o story não muda
 await send('Page.navigate', { url: pathToFileURL(resolve(html)).href }, s);
 await new Promise(r => setTimeout(r, 1500));  // fontes
 await send('Runtime.evaluate', { expression: 'document.fonts.ready', awaitPromise: true }, s);
 
+if (process.env.QUADROS) {
+  for (const t of process.env.QUADROS.split(',')) {
+    await send('Runtime.evaluate', { expression: `frame(${t})` }, s);
+    const { data } = await send('Page.captureScreenshot', { format: 'png' }, s);
+    writeFileSync(`${saida}-${t}.png`, Buffer.from(data, 'base64'));
+  }
+  await new Promise(r => { ch.on('exit', r); ch.kill(); });
+  rmSync(perfil, { recursive: true, force: true });
+  process.exit(0);
+}
 const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', fps, '-i', '-',
   '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '17', '-preset', 'slow', '-movflags', '+faststart', saida], { stdio: ['pipe', 'inherit', 'inherit'] });
 const N = Math.round(segs * fps);

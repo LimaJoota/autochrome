@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><title>autochrome story</title>
-<!-- Story 1080x1920 ou, com a janela deitada, 1280x640 para o GitHub; 15 s. frame(t) desenha o instante t; render.mjs grava os quadros. Cores do Escrevoz, tema claro, um destaque (laranja). -->
+<!-- Story 1080x1920 ou, com a janela deitada, 1280x640 para o GitHub; 22 s. frame(t) desenha o instante t; render.mjs grava os quadros. Cores do Escrevoz, tema claro, um destaque (laranja); o aviso e as Configurações escuros, como no produto. -->
 <style>
 @font-face{font-family:Redonda;src:url("file:///System/Library/Fonts/SFCompactRounded.ttf");font-weight:100 900}
 :root{--ink:#15171a;--ink2:#5d6168;--line:#e4e4e7;--bg:#f7f7f8;--card:#fff;--acc:#ff5a1f}
@@ -43,12 +43,29 @@ body{width:1080px;height:1920px;overflow:hidden;background:var(--bg);color:var(-
 #word{left:0;width:1080px;top:770px;text-align:center;font-family:Redonda,-apple-system,system-ui;font-weight:700;font-size:168px}
 .bl{left:90px;width:900px;text-align:center;font-size:50px;line-height:1.25}
 .cinza{color:var(--ink2)}
+/* aviso do ask, na escala da mesa (2,5×): o desenho real do painel (escuro do Escrevoz) */
+#ask{left:256px;top:336px;width:800px;background:#17191c;color:#f4f4f5;border:2px solid rgba(128,128,128,.22);border-radius:40px;padding:36px 40px 30px;box-shadow:0 30px 70px rgba(21,23,26,.28);transform-origin:760px 0}
+.ah{display:flex;align-items:center;gap:15px;font-size:29px;font-weight:600;color:#9a9ea6;height:40px}
+.ah svg{width:35px;height:35px;color:#ff6a33}
+.at{margin-top:20px;font-size:33px;line-height:1.3;text-wrap:balance}
+.ab{display:flex;justify-content:flex-end;gap:15px;margin-top:30px}
+.ab span{height:65px;border-radius:33px;padding:0 37px;min-width:180px;display:flex;align-items:center;justify-content:center;font-size:31px;font-weight:600}
+#nao{background:rgba(128,128,128,.14)}
+#env{background:rgba(255,106,51,.18);color:#ff6a33}
+/* Configurações: a página real do painel (panel.html) numa janela */
+#cfg{left:199px;top:336px;width:682px;height:994px;border-radius:20px;overflow:hidden;background:#17191c;box-shadow:0 30px 80px rgba(21,23,26,.3);transform-origin:700px 0}
+#cfg.claro{background:#f7f7f8}
+.ctb{height:49px;display:flex;align-items:center;gap:14px;padding:0 22px;position:relative}
+.ctb i{width:21px;height:21px;border-radius:50%;background:#3a3d42}
+#cfg.claro .ctb i{background:var(--line)}
+.ctb span{position:absolute;left:0;right:0;text-align:center;font-size:23px;font-weight:600;color:#9a9ea6}
+#cf{display:block;width:440px;height:610px;border:0;transform:scale(1.55);transform-origin:0 0}
 /* deitado (GitHub, 1280x640): a mesa reduzida à esquerda, os títulos à direita, a marca no centro */
 body.l{width:1280px;height:640px}
-body.l #stage{left:30px;top:-106px;transform:scale(.56);transform-origin:0 0}
+body.l #stage{left:30px;top:-120px;transform:scale(.56);transform-origin:0 0}
 body.l .hl{left:660px;width:590px;text-align:left;font-size:46px}
 body.l .hl.s{font-size:32px}
-body.l #h1a,body.l #h2a{top:236px!important}body.l #h1b,body.l #h2b{top:300px!important}body.l #h2c{top:280px!important}
+body.l .hl.a{top:236px!important}body.l .hl.b{top:300px!important}body.l #h5{top:280px!important}
 body.l #brand{width:1280px;height:640px}
 body.l #bico{left:590px;top:50px;width:100px;height:100px}
 body.l #word{width:1280px;top:150px;font-size:110px}
@@ -63,6 +80,8 @@ body.l #b3{top:474px!important;font-size:30px!important}body.l #b4{top:516px!imp
     <path d="M8.5 4.6V2M6.4 5.5 4.6 3.7M5.6 7.5H3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/></symbol>
   <symbol id="slash" viewBox="0 0 24 24"><path d="M8.5 7.5v13.2l3.3-3.2 2.4 5.2 2.2-1-2.4-5.1h4.6z" fill="currentColor"/>
     <path d="M3 3l18 18" stroke="#fff" stroke-width="4"/><path d="M3 3l18 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="bal" viewBox="0 0 24 24"><path d="M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-8l-4.5 3.6V17H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M10 8.6a2.1 2.1 0 1 1 3 1.9c-.7.3-1 .8-1 1.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="14.2" r="1.1" fill="currentColor"/></symbol>
 </defs></svg>
 
 <div id="stage" class="abs"><div id="desk" class="abs">
@@ -83,29 +102,39 @@ body.l #b3{top:474px!important;font-size:30px!important}body.l #b4{top:516px!imp
     <div class="tb"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span>Proposta</span></div>
     <div id="txt"><span id="typed"></span><i id="caret"></i></div>
   </div>
+  <div id="ask" class="abs">
+    <div class="ah"><svg><use href="#cur"/></svg>Orçamentos</div>
+    <div class="at">O orçamento está anexado na conversa com a Ana. Posso enviar?</div>
+    <div class="ab"><span id="nao">Agora não</span><span id="env">Enviar</span></div>
+  </div>
+  <div id="cfg" class="abs"><div class="ctb"><i></i><i></i><i></i><span>autochrome</span></div><iframe id="cf" src="../../panel.html"></iframe></div>
   <div id="menu" class="abs">
-    <div class="mi g">autochrome v1.4.0</div><div class="sep"></div>
-    <div class="mi" id="stop">Parar o autochrome</div><div class="sep"></div>
+    <div class="mi g">autochrome v1.5.0</div><div class="sep"></div>
+    <div class="mi">Parar o autochrome</div><div class="sep"></div>
     <div class="mi h">Últimas ações</div>
-    <div class="mi">12:22&nbsp;&nbsp;Painel: anexou orcamento.pdf · web.whatsapp.com</div>
-    <div class="mi">12:22&nbsp;&nbsp;Painel: abriu web.whatsapp.com</div>
-    <div class="mi">12:21&nbsp;&nbsp;Agenda: leu calendar.google.com</div>
-    <div class="mi">⚠︎ 12:20&nbsp;&nbsp;Painel: tentou abrir Favoritos</div>
+    <div class="mi">12:23&nbsp;&nbsp;Orçamentos: clicou em “Enviar” · web.whatsapp.com</div>
+    <div class="mi">12:23&nbsp;&nbsp;Orçamentos: perguntou «Posso enviar?» → Enviar</div>
+    <div class="mi">12:22&nbsp;&nbsp;Orçamentos: anexou orcamento.pdf · web.whatsapp.com</div>
+    <div class="mi">⚠︎ 12:20&nbsp;&nbsp;Agenda: tentou abrir Favoritos</div>
     <div class="mi sub">você estava usando o Vivaldi</div><div class="sep"></div>
     <div class="mi">Modo (Escondido)<span>›</span></div>
     <div class="mi">Navegador (Vivaldi)<span>›</span></div>
     <div class="mi">Só leitura</div><div class="sep"></div>
-    <div class="mi">Configurações…<span>⌘,</span></div><div class="sep"></div>
+    <div class="mi" id="mcfg">Configurações…<span>⌘,</span></div><div class="sep"></div>
     <div class="mi">Sair<span>⌘Q</span></div>
   </div>
   <svg id="ptr" class="abs" viewBox="0 0 24 24"><path d="M5 2.5v17.2l4.4-4.2 3.1 6.8 2.9-1.3-3.1-6.7h6z" fill="#15171a" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></svg>
 </div></div>
 
-<div class="hl abs" id="h1a" style="top:1350px">O Claude faz por você</div>
-<div class="hl s abs" id="h1b" style="top:1440px">no seu navegador, por trás</div>
-<div class="hl abs" id="h2a" style="top:1350px">Você vê cada passo</div>
-<div class="hl s abs" id="h2b" style="top:1440px">em português, com o nome do chat</div>
-<div class="hl abs" id="h2c" style="top:1390px">E para com um clique</div>
+<div class="hl a abs" id="h1a" style="top:1376px">O Claude faz por você</div>
+<div class="hl s b abs" id="h1b" style="top:1466px">no seu navegador, por trás</div>
+<div class="hl a abs" id="h2a" style="top:1376px">Ele pede o seu OK antes</div>
+<div class="hl s b abs" id="h2b" style="top:1466px">e você continua digitando</div>
+<div class="hl a abs" id="h3a" style="top:1376px">Você vê cada passo</div>
+<div class="hl s b abs" id="h3b" style="top:1466px">em português, com o nome do chat</div>
+<div class="hl a abs" id="h4a" style="top:1376px">O aviso do seu jeito</div>
+<div class="hl s b abs" id="h4b" style="top:1466px">tema, cor e canto da tela</div>
+<div class="hl abs" id="h5" style="top:1416px">E para com um clique</div>
 
 <div id="brand" class="abs">
   <svg id="bico" class="abs" style="color:var(--acc)"><use href="#cur"/></svg>
@@ -128,62 +157,106 @@ if (innerWidth > innerHeight) {  // deitado: uma linha onde o story usa duas
 const E = (a, d, t) => Math.min(1, Math.max(0, (t - a) / d));
 const out = p => 1 - Math.pow(1 - p, 3);                                   // entrada
 const io = p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;   // movimento e saída
-const TXT = 'Revisar os valores da proposta e mandar para o cliente amanhã cedo';
-const PULSOS = [1.0, 1.9, 2.7, 3.4];  // cada ação do autochrome: o ícone pulsa
-
+const TXT = 'Revisar os valores da proposta e mandar para o cliente amanhã cedo, com o frete';
+const PULSOS = [1.0, 1.9, 2.7, 3.4, 7.3, 7.9];  // cada ação do autochrome: o ícone pulsa
+const TROCAS = [[0, '#cur'], [4.0, '#bal'], [7.05, '#cur'], [14.25, '#slash']];  // ícone: pedido na tela (balão), parado (riscado)
+const K = 1.55;  // escala da página do painel dentro da janela
+// o ponteiro faz arco de um alvo ao outro: [início, duração, alvo]
+const ROTA = [[6.0, .6, 'env'], [10.3, .6, 'mcfg'], [12.0, .5, '#tema [data-t=claro]'], [13.55, .5, '#stop']];
+const doc = () => { try { return $('cf').contentDocument; } catch (e) { return null; } };
+function alvo(a) {  // centro do elemento na mesa, sem contar transform (offset*)
+  const dentro = a.startsWith('#'), d = dentro ? doc() : document, el = dentro ? d && d.querySelector(a) : $(a);
+  if (!el) return [540, 900];
+  let x = el.offsetWidth / 2, y = el.offsetHeight / 2;
+  for (let e = el; e && e.id !== 'desk'; e = e.offsetParent) { x += e.offsetLeft; y += e.offsetTop; }
+  return dentro ? [$('cfg').offsetLeft + x * K, $('cfg').offsetTop + 49 + y * K] : [x, y];
+}
 function fade(el, tin, tout, dy = 26) {  // entra com ease-out, sai 20% mais rápido subindo
   const pi = out(E(tin, .32, t0)), po = io(E(tout, .26, t0));
   el.style.opacity = pi * (1 - po);
   el.style.transform = `translateY(${(1 - pi) * dy - po * 18}px)`;
 }
+const aperta = (el, t, tp) => { el.style.transform = `scale(${1 - .03 * Math.sin(Math.PI * E(tp, .15, t))})`; };  // 0,97 ao clicar
+const pop = (el, tin, tout, t) => {  // abre do ícone (0,95 → 1, ease-out) e fecha 20% mais rápido
+  const pi = out(E(tin, .25, t)), po = io(E(tout, .2, t));
+  el.style.opacity = pi * (1 - po); el.style.transform = `scale(${.95 + .05 * pi - .05 * po})`;
+  el.style.visibility = pi && po < 1 ? 'visible' : 'hidden';
+};
+const ESTADO = {claro: false, parado: false};
+function painel(t) {  // a página real do painel muda pelos próprios botões dela
+  const d = doc();
+  if (!d || !d.getElementById('stop')) return;
+  let luz = d.getElementById('luz');
+  if (!luz) { luz = d.createElement('style'); luz.id = 'luz'; d.head.appendChild(luz);
+    luz.textContent = ':root{--fg:#15171a;--bg:#f7f7f8;--card:#fff;--ink3:#6b6f76;--acc:#ff5a1f;--moss:#2f7d5b;color-scheme:light}'; }
+  const claro = t >= 12.7, parado = t >= 14.25;
+  if (claro !== ESTADO.claro) { d.querySelector(`#tema [data-t="${claro ? 'claro' : ''}"]`).click(); ESTADO.claro = claro; }
+  luz.disabled = !claro; $('cfg').classList.toggle('claro', claro);
+  if (parado !== ESTADO.parado) { d.getElementById('stop').click(); ESTADO.parado = parado; }
+  aperta(d.querySelector('#tema [data-t=claro]'), t, 12.55); aperta(d.getElementById('stop'), t, 14.1);
+}
 let t0 = 0;
 function frame(t) {
   t0 = t;
-  // cena 1: digitando; o navegador atrás ganha uma aba de fundo; o ícone pulsa a cada ação
-  const n = Math.floor(io(E(.3, 3.5, t)) * TXT.length);
-  $('typed').textContent = TXT.slice(0, n);
-  $('caret').style.opacity = (t > 3.8 && Math.floor(t * 2) % 2) ? 0 : 1;
+  // digitando o tempo todo: o aviso e as ações não tiram o teclado dele
+  $('typed').textContent = TXT.slice(0, Math.floor(E(.3, 7.5, t) * TXT.length));
+  $('caret').style.opacity = (t > 7.8 && Math.floor(t * 2) % 2) ? 0 : 1;
   const pt = out(E(1.0, .28, t)), nt = $('newtab');
   nt.style.width = 230 * pt + 'px'; nt.style.padding = pt ? '0 16px' : '0';
   $('spin').style.transform = `rotate(${t * 540}deg)`;
   $('spin').style.display = t < 2.0 ? '' : 'none'; $('wfav').style.display = t < 2.0 ? 'none' : '';
-  let s = 1, acc = 0;
+  // ícone: pulsa a cada ação; troca de símbolo com escala e desfoque
+  let s = 1, acc = 0, sym = '#cur', blur = 0;
   for (const p of PULSOS) { const q = E(p, .42, t); if (q > 0 && q < 1) { s = Math.max(s, 1 + .3 * Math.sin(Math.PI * q)); acc = 1; } }
+  for (const [tt, nome] of TROCAS) {
+    if (t >= tt - .125) sym = nome;
+    const ps = E(tt - .125, .25, t);
+    if (tt && ps > 0 && ps < 1) { blur = Math.sin(Math.PI * ps) * 3; s = 1 - .25 * Math.sin(Math.PI * ps); }
+  }
   const ico = $('ico');
-  ico.style.transform = `scale(${s})`; ico.style.color = acc ? 'var(--acc)' : 'var(--ink)';
-  // parado: troca de ícone com escala e desfoque
-  const ps = io(E(8.0, .25, t));
-  $('icoU').setAttribute('href', ps > .5 ? '#slash' : '#cur');
-  ico.style.filter = `blur(${Math.sin(Math.PI * ps) * 3}px)`;
-  if (ps > 0 && ps < 1) ico.style.transform = `scale(${1 - .25 * Math.sin(Math.PI * ps)})`;
+  $('icoU').setAttribute('href', sym);
+  ico.style.transform = `scale(${s})`; ico.style.filter = `blur(${blur}px)`; ico.style.color = acc ? 'var(--acc)' : 'var(--ink)';
 
-  // cena 2: o menu abre do ícone; linhas escalonadas 30 ms
-  const pm = out(E(4.1, .22, t)), pc = io(E(8.0, .18, t)), m = $('menu');
-  m.style.opacity = pm * (1 - pc); m.style.transform = `scale(${.95 + .05 * pm - .05 * pc})`;
-  [...m.children].forEach((c, i) => { const p = out(E(4.1 + .03 * i, .2, t)); c.style.opacity = p; c.style.transform = `translateY(${(1 - p) * -8}px)`; });
-  // ponteiro faz arco até "Parar", destaca, aperta (0,97) e clica
-  const pp = io(E(6.7, .6, t)), P = [620, 1180], C = [140, 860], Q = [330, 450];
-  const bx = (1 - pp) ** 2 * P[0] + 2 * (1 - pp) * pp * C[0] + pp * pp * Q[0];
-  const by = (1 - pp) ** 2 * P[1] + 2 * (1 - pp) * pp * C[1] + pp * pp * Q[1];
+  // cena 2: o pedido aparece no canto sem tirar o teclado; ele clica em Enviar
+  pop($('ask'), 4.15, 7.05, t);
+  const env = $('env');
+  env.style.background = `rgba(255,106,51,${t >= 6.6 ? .32 : .18})`;
+  aperta(env, t, 6.85);
+  // cena 3: o menu abre do ícone; linhas escalonadas 30 ms; ele vai em Configurações…
+  const m = $('menu');
+  pop(m, 8.3, 11.15, t);
+  [...m.children].forEach((c, i) => { const p = out(E(8.3 + .03 * i, .2, t)); c.style.opacity = p; c.style.transform = `translateY(${(1 - p) * -8}px)`; });
+  const mc = $('mcfg'), hv = E(10.85, .12, t);
+  mc.style.background = hv ? `rgba(255,90,31,${hv})` : 'transparent'; mc.style.color = hv > .5 ? '#fff' : '';
+  if (hv) aperta(mc, t, 10.98);
+  // cena 4: a janela Configurações (a página real do painel): tema claro e Parar
+  pop($('cfg'), 11.35, 99, t);
+  painel(t);
+  // ponteiro: arcos entre os alvos
+  let pos = [600, 1120];
+  for (const [ti, du, a] of ROTA) {
+    if (t < ti) break;
+    const A = pos, B = alvo(a), p = io(E(ti, du, t));
+    const C = [(A[0] + B[0]) / 2 - (B[1] - A[1]) * .25, (A[1] + B[1]) / 2 + (B[0] - A[0]) * .25];
+    pos = [(1 - p) ** 2 * A[0] + 2 * (1 - p) * p * C[0] + p * p * B[0], (1 - p) ** 2 * A[1] + 2 * (1 - p) * p * C[1] + p * p * B[1]];
+  }
   const ptr = $('ptr');
-  ptr.style.opacity = out(E(6.55, .15, t)) * (1 - io(E(8.2, .2, t)));
-  ptr.style.transform = `translate(${bx}px,${by}px)`;
-  const hv = E(7.3, .12, t), st = $('stop');
-  st.style.background = hv ? `rgba(255,90,31,${hv})` : 'transparent'; st.style.color = hv > .5 ? '#fff' : '';
-  const pr = E(7.65, .16, t);
-  st.style.transform = `scale(${1 - .03 * Math.sin(Math.PI * pr)})`;
+  ptr.style.opacity = out(E(5.85, .15, t)) * (1 - io(E(15.9, .2, t)));
+  ptr.style.transform = `translate(${pos[0] - 10}px,${pos[1] - 5}px)`;
 
   fade($('h1a'), .3, 3.95); fade($('h1b'), 1.2, 3.95);
-  fade($('h2a'), 4.3, 7.15); fade($('h2b'), 4.45, 7.15);
-  fade($('h2c'), 7.35, 9.45);
+  fade($('h2a'), 4.3, 8.1); fade($('h2b'), 4.45, 8.1);
+  fade($('h3a'), 8.45, 11.2); fade($('h3b'), 8.6, 11.2);
+  fade($('h4a'), 11.45, 14.2); fade($('h4b'), 11.6, 14.2);
+  fade($('h5'), 14.4, 16.05);
 
-  // cena 3: a mesa sai subindo enquanto a marca entra
-  const pd = io(E(9.6, .45, t)), d = $('desk');
+  // cena 5: a mesa sai subindo enquanto a marca entra
+  const pd = io(E(16.2, .45, t)), d = $('desk');
   d.style.opacity = 1 - pd; d.style.transform = `translateY(${-90 * pd}px)`;
-  const pb = out(E(9.85, .45, t)), q = E(10.7, .45, t);
+  const pb = out(E(16.45, .45, t)), q = E(17.3, .45, t);
   $('bico').style.opacity = pb; $('bico').style.transform = `scale(${(.85 + .15 * pb) * (1 + .12 * Math.sin(Math.PI * q))})`;
-  fade($('word'), 10.0, 99, 34); fade($('b1'), 10.35, 99); fade($('b2'), 10.5, 99); fade($('b5'), 10.95, 99); fade($('b6'), 11.05, 99);
-  fade($('b3'), 11.6, 99); fade($('b4'), 11.75, 99);
+  fade($('word'), 16.6, 99, 34); fade($('b1'), 16.95, 99); fade($('b2'), 17.1, 99); fade($('b5'), 17.55, 99); fade($('b6'), 17.65, 99);
+  fade($('b3'), 18.2, 99); fade($('b4'), 18.35, 99);
 }
 frame(0);
 </script></body></html>

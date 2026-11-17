@@ -2,17 +2,17 @@
 
 Ask in the chat and Claude Code does it in the browser you already use: Gmail, WhatsApp Web and your own systems, already logged in. No extension, free and open source.
 
-![autochrome: Claude works in a background tab while you keep typing, every step shows in the menu bar, and one click stops it](assets/autochrome.gif)
+![autochrome: Claude works in a background tab while you keep typing, asks for your OK in a corner window, shows every step in the menu bar and stops with one click](assets/autochrome.gif)
 
-Vertical version for stories, 15 s: [autochrome-story.mp4](assets/story/autochrome-story.mp4).
+Vertical version for stories, 22 s: [autochrome-story.mp4](assets/story/autochrome-story.mp4).
 
-It is an MCP server that lets Claude Code drive the browser you already use on a Mac: list and open tabs, read a page, click, type and attach a local file. It talks to the browser through AppleScript (JXA), so there is no extension to install, no browser restart and no open port. Your logged-in sites, such as WhatsApp Web, work as they are.
+It is an MCP server that lets Claude Code drive the browser you already use on a Mac: list and open tabs, read a page, click, type, attach a local file and ask for your OK before it sends. It talks to the browser through AppleScript (JXA), so there is no extension to install, no browser restart and no open port. Your logged-in sites, such as WhatsApp Web, work as they are.
 
 Vivaldi comes first and is the one tested. Other Chromium browsers with AppleScript (Google Chrome, Brave, Microsoft Edge, Arc) use the same calls.
 
-![Three steps: open a tab without taking the person's tab, read numbered elements and click or type by number, attach a file and stop before sending](assets/autochrome.svg)
+![Three steps: open a tab without taking the person's tab, read numbered elements and click or type by number, attach a file and ask in a corner window before sending](assets/autochrome.svg)
 
-> **Em português:** servidor MCP para o Claude Code mexer no navegador do Mac, a começar pelo Vivaldi: listar e abrir abas, ler a página, clicar, digitar e anexar arquivo. Usa AppleScript (JXA), sem extensão, sem reiniciar o navegador e sem porta aberta. Os sites já logados, como o WhatsApp Web, funcionam do jeito que estão. Nada é enviado sozinho: mandar é um clique que o agente precisa escolher.
+> **Em português:** servidor MCP para o Claude Code mexer no navegador do Mac, a começar pelo Vivaldi: listar e abrir abas, ler a página, clicar, digitar, anexar arquivo e pedir o seu OK num aviso no canto da tela, sem tirar o seu teclado. Usa AppleScript (JXA), sem extensão, sem reiniciar o navegador e sem porta aberta. Os sites já logados, como o WhatsApp Web, funcionam do jeito que estão. Nada é enviado sozinho: antes de mandar, o Claude pode perguntar, e o envio só acontece depois do seu clique.
 
 ## Install
 
@@ -44,6 +44,20 @@ Then, in the browser, turn on **Allow JavaScript from Apple Events** (Vivaldi: S
 
 Every tool takes `browser` and `show`. Without MCP: `python3 autochrome.py call read '{"tab_id":"123"}'`.
 
+## Asking before it sends
+
+Some steps should wait for you, like sending a message or paying. `ask` puts the question in a small window in the top-right corner, over every app. You keep typing where you were; the window never takes the keyboard. Claude gets the button you clicked and goes on.
+
+```text
+You:     send the quote to Ana on WhatsApp
+Claude:  opens web.whatsapp.com in a background tab, finds Ana, pastes quote.pdf
+         asks  "The quote is attached in Ana's chat. Send it?"  [Send] [Not now]
+You:     click Send in the corner, without leaving what you were writing
+Claude:  clicks the send button and closes the tab
+```
+
+Without MCP: `python3 autochrome.py call ask '{"text":"Send it?","options":["Send","Not now"]}'` prints the button you clicked, or "sem resposta" (no answer) after `wait` seconds.
+
 ## Hidden or visible
 
 - **Hidden** (default): work happens in a background tab. The browser stays behind; if it jumps to the front anyway, autochrome hands the front back to the app you were in, so your typing does not land in the address bar. A small watcher keeps doing this while each action runs and for 4 s after it, because a page that downloads a file or opens a window brings the browser forward later. If you click the browser yourself, it lets you.
@@ -70,7 +84,7 @@ The menu does not take the keyboard and opens no network port; Settings takes it
 - `open` never opens a tab while you are using the browser: it waits up to 10 s for you to switch apps, then gives up, so a new tab never catches your typing.
 - While **Allow JavaScript from Apple Events** is on, any program on this Mac with the Automation permission for the browser can run JavaScript in your tabs, logged-in sites included. Turn it off when you do not need it.
 - `read` brings the page text into the conversation, private messages included. Point it at the tab you mean.
-- Nothing sends by itself. Sending a message is a separate click on the send button.
+- Nothing sends by itself. Sending a message is a separate click on the send button, and Claude can ask first with `ask`.
 - `click`, `type`, `attach` and `js` need a `tab_id`, so they never act on the tab you happen to be looking at.
 - `attach` refuses keys and credentials (`~/.ssh`, `.env`, `*.pem`, keychains and similar).
 - `read` marks page text as data, not instructions. The log keeps no page text and masks anything typed that looks like a key.
