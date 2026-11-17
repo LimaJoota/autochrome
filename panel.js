@@ -256,7 +256,7 @@ function run(argv) {
     passo(700, () => { monta(); saida.push('menu ' + MENU.numberOfItems + ' itens, 1º ' + MENU.itemAtIndex(2).title.js); });
     passo(900, () => { clica('Configurações…'); saida.push('config ' + win.isVisible); });
     passo(1000, () => { fm.createDirectoryAtPathWithIntermediateDirectoriesAttributesError(PD, true, $(), null);
-      wr(PD + '/t1.json', JSON.stringify({chat: 'Mac — organização', text: '3 abas novas desde as 10:00. Mover para a pilha Trabalho? Elas são do mesmo site.',
+      wr(PD + '/t1.json', JSON.stringify({chat: 'Mac — organização', text: '1 aba nova fora das pilhas do Vivaldi:\n• LimaJoota (github.com) → pilha Contas\nPosso colocar na pilha indicada? Nenhuma aba é fechada.',
         options: ['Pode', 'Agora não'], t: Date.now() / 1000}));
       wr(PD + '/t2.json', JSON.stringify({chat: 'Site — desenvolvimento', text: 'Segundo pedido.', options: ['Ok'], t: Date.now() / 1000 + 1})); });
     passo(1700, () => { const v = pop.contentView, r = v.bitmapImageRepForCachingDisplayInRect(v.bounds);

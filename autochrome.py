@@ -254,7 +254,7 @@ def ask(text, options=None, wait=60, key=""):
     p, r = os.path.join(pasta, nome + ".json"), os.path.join(pasta, nome + ".resposta")
     if not os.path.exists(p) and not os.path.exists(r):  # mesma key já na tela: não repete o aviso
         with open(p + ".tmp", "w") as f:
-            json.dump({"chat": chat(), "text": " ".join(str(text).split())[:300], "options": opts, "t": time.time()},
+            json.dump({"chat": chat(), "text": "\n".join(" ".join(l.split()) for l in str(text).splitlines() if l.strip())[:400], "options": opts, "t": time.time()},
                       f, ensure_ascii=False)
         os.replace(p + ".tmp", p)  # o painel nunca lê meio arquivo
     fim = time.time() + max(0.0, min(float(wait), 3600.0))
@@ -317,7 +317,7 @@ SPEC = [
     tool("ask", ask, "Pede o OK do usuário sem travar o trabalho dele: um aviso no canto da tela, com o texto e até 3 "
          "botões, que não toma o teclado. Devolve o botão clicado ou 'sem resposta'. Com `key`, o aviso fica na tela "
          "depois do `wait` e a próxima chamada com a mesma key pega a resposta (bom para tarefa agendada).",
-         {"text": {"type": "string", "description": "a pergunta e o porquê, em uma ou duas frases"},
+         {"text": {"type": "string", "description": "comece pelo que você quer fazer, em palavras simples, e diga o porquê; uma linha por item, sem título cortado"},
           "options": {"type": "array", "items": {"type": "string"}, "description": "botões; padrão Pode e Agora não"},
           "wait": {"type": "integer", "description": "segundos esperando o clique (0 a 3600, padrão 60)"},
           "key": {"type": "string", "description": "nome fixo do pedido, para não repetir o aviso"}}, ["text"]),
@@ -384,6 +384,9 @@ def chat():
     global CHAT
     if CHAT is not None:
         return CHAT
+    if os.environ.get("AUTOCHROME_CHAT"):  # script fora de um chat (agente, tarefa) diz quem pergunta
+        CHAT = os.environ["AUTOCHROME_CHAT"][:60]
+        return CHAT
     sid, cwd, pid = os.environ.get("CLAUDE_CODE_SESSION_ID", ""), "", os.getppid()
     for _ in range(8):  # servidor MCP não recebe o id: sobe até o processo do Claude e usa a pasta dele
         if sid or pid <= 1:
@@ -431,7 +434,7 @@ def frase(name, args, site, ok, msg):
          "attach": ("anexou " + arq + em, "anexar " + arq + em),
          "js": (("mandou " + lab if lab else "rodou um comando") + em, (lab or "rodar um comando") + em),
          "close": ("fechou " + onde, "fechar " + onde),
-         "ask": ("perguntou «%s» → %s" % (str(args.get("text", ""))[:40], msg), "perguntar")}.get(name, (name, name))
+         "ask": ("perguntou «%s» → %s" % (" ".join(str(args.get("text", "")).split())[:40], msg), "perguntar")}.get(name, (name, name))
     return f[0] if ok else "tentou " + f[1]
 
 
