@@ -245,6 +245,35 @@ def js(code, tab_id=None):
     return page(tab_id, "return (async()=>{%s})();" % code)  # aceita await
 
 
+def ask(text, options=None, wait=60, key=""):
+    """Aviso no painel (canto da tela, sem tomar o teclado). O painel grava <nome>.resposta com o botão clicado."""
+    opts = [" ".join(str(o).split())[:24] for o in (options or []) if str(o).strip()][:3] or ["Pode", "Agora não"]
+    pasta = os.path.join(D, "pedidos")
+    os.makedirs(pasta, mode=0o700, exist_ok=True)
+    nome = re.sub(r"[^\w-]", "", str(key))[:60] or "p%d" % time.time_ns()
+    p, r = os.path.join(pasta, nome + ".json"), os.path.join(pasta, nome + ".resposta")
+    if not os.path.exists(p) and not os.path.exists(r):  # mesma key já na tela: não repete o aviso
+        with open(p + ".tmp", "w") as f:
+            json.dump({"chat": chat(), "text": " ".join(str(text).split())[:300], "options": opts, "t": time.time()},
+                      f, ensure_ascii=False)
+        os.replace(p + ".tmp", p)  # o painel nunca lê meio arquivo
+    fim = time.time() + max(0.0, min(float(wait), 3600.0))
+    while not os.path.exists(r):
+        if time.time() >= fim:
+            if key:
+                return "sem resposta (o aviso segue na tela: chame de novo com a mesma key)"
+            try:
+                os.unlink(p)  # sem key ninguém leria a resposta depois
+            except OSError:
+                pass
+            return "sem resposta"
+        time.sleep(0.5)
+    with open(r) as f:
+        out = f.read().strip()
+    os.unlink(r)
+    return out
+
+
 def close(tab_id):
     return jxa("tab(%s).close(); keepFocus(0.8); return 'fechada';" % json.dumps(tab_id))
 
@@ -285,6 +314,13 @@ SPEC = [
               "palavras simples, com verbo no infinitivo (ex.: 'agrupar as abas por site'). Vai para o registro do "
               "painel no lugar do código; sem label o usuário só lê 'rodou um comando'."}), ["code"]),
     tool("close", close, "Fecha uma aba pelo id.", TAB, ["tab_id"]),
+    tool("ask", ask, "Pede o OK do usuário sem travar o trabalho dele: um aviso no canto da tela, com o texto e até 3 "
+         "botões, que não toma o teclado. Devolve o botão clicado ou 'sem resposta'. Com `key`, o aviso fica na tela "
+         "depois do `wait` e a próxima chamada com a mesma key pega a resposta (bom para tarefa agendada).",
+         {"text": {"type": "string", "description": "a pergunta e o porquê, em uma ou duas frases"},
+          "options": {"type": "array", "items": {"type": "string"}, "description": "botões; padrão Pode e Agora não"},
+          "wait": {"type": "integer", "description": "segundos esperando o clique (0 a 3600, padrão 60)"},
+          "key": {"type": "string", "description": "nome fixo do pedido, para não repetir o aviso"}}, ["text"]),
 ]
 HANDLERS = {n: f for n, f, _ in SPEC}
 
@@ -314,7 +350,7 @@ def guard(name, args, ctl):
             raise RuntimeError("Passe tab_id (de tabs ou open). Ação sem id seria na aba que o usuário está vendo.")
     if name == "attach" and SENSIVEL.search(os.path.realpath(os.path.expanduser(str(args.get("path", ""))))):
         raise RuntimeError("Arquivo sensível (chave, senha ou credencial): anexo bloqueado.")
-    if name == "tabs":
+    if name in ("tabs", "ask"):
         return ""
     url = str(args.get("url", "")) if name == "open" else jxa("return tab(%s).url();" % json.dumps(args.get("tab_id")))
     site = (urllib.parse.urlsplit(url).hostname or url[:40]).lower()
@@ -394,7 +430,8 @@ def frase(name, args, site, ok, msg):
          "type": ("digitou «%s»" % t + em, "digitar" + em),
          "attach": ("anexou " + arq + em, "anexar " + arq + em),
          "js": (("mandou " + lab if lab else "rodou um comando") + em, (lab or "rodar um comando") + em),
-         "close": ("fechou " + onde, "fechar " + onde)}.get(name, (name, name))
+         "close": ("fechou " + onde, "fechar " + onde),
+         "ask": ("perguntou «%s» → %s" % (str(args.get("text", ""))[:40], msg), "perguntar")}.get(name, (name, name))
     return f[0] if ok else "tentou " + f[1]
 
 
@@ -477,7 +514,7 @@ def vigia(name):
     """Modo escondido: uma página que baixa arquivo ou abre janela traz o navegador para a frente depois que o
     osascript da ação já saiu (Gmail, 16/11/2026: "NAO QUERO NINGUEM MEXENDO NA MINHA TELA"). Sobe o vigia.js à
     parte, espera ele guardar o app da frente e devolve a marca que o encerra."""
-    if SHOW or name in ("tabs", "read"):
+    if SHOW or name in ("tabs", "read", "ask"):
         return None
     os.makedirs(D, mode=0o700, exist_ok=True)
     marca = os.path.join(D, "vigia.%d.%d" % (os.getpid(), time.time_ns()))
@@ -507,7 +544,7 @@ def call(name, args):
     finally:
         if marca:
             os.unlink(marca)  # a vigia segue mais 4 s e sai sozinha
-    log(name, args, site, True, out if name in ("open", "attach", "click") else "")
+    log(name, args, site, True, out if name in ("open", "attach", "click", "ask") else "")
     return out
 
 
@@ -526,7 +563,7 @@ def serve():
             continue
         if method == "initialize":
             res = {"protocolVersion": params.get("protocolVersion", "2024-11-05"), "capabilities": {"tools": {}},
-                   "serverInfo": {"name": "autochrome", "version": "1.4.0"}}
+                   "serverInfo": {"name": "autochrome", "version": "1.5.0"}}
         elif method == "tools/list":
             res = {"tools": [s for _, _, s in SPEC]}
         elif method == "tools/call":

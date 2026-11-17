@@ -5,6 +5,7 @@
   /* Paleta e tipografia do Escrevoz: fundo neutro, cartões com linha fina, laranja só no que age. */
   :root{--fg:#15171a;--bg:#f7f7f8;--card:#fff;--ink3:#6b6f76;--line:color-mix(in srgb,#808080 20%,transparent);
     --wash:color-mix(in srgb,#808080 10%,transparent);--acc:#ff5a1f;--moss:#2f7d5b;--err:#dc2626;color-scheme:light dark}
+  /* escuro do Escrevoz por padrão; o painel segue a opção Tema (aparência do app), não a do Mac */
   @media (prefers-color-scheme:dark){:root{--fg:#f4f4f5;--bg:#17191c;--card:#1f2226;--ink3:#9a9ea6;--acc:#ff6a33;--moss:#86c9a4;--err:#f87171}}
   *{box-sizing:border-box}
   body{margin:0;font:13px/1.45 system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--fg);-webkit-user-select:none;cursor:default}
@@ -27,6 +28,9 @@
   #stop{font-weight:600;padding:6px 16px;border-radius:7px;background:var(--acc);color:#fff}
   .parado #stop{background:var(--moss)}
   .seg{display:grid;grid-template-columns:1fr 1fr;background:var(--wash);border-radius:7px;padding:2px;flex:none}
+  .s3{grid-template-columns:1fr 1fr 1fr}
+  input[type=color]{flex:none;width:26px;height:22px;border:0;padding:0;background:none;cursor:pointer}
+  .sec{flex:none;padding:4px 12px;border-radius:6px;background:var(--wash);font-size:12px}
   .seg button{padding:4px 11px;border-radius:5px;font-size:12px}
   .seg .on{background:var(--card);font-weight:600;box-shadow:0 1px 2px #0002}
   .sw{appearance:none;-webkit-appearance:none;flex:none;width:36px;height:22px;margin:0;border-radius:11px;background:var(--wash);
@@ -56,6 +60,15 @@
     <div class="row"><div class="t"><b>Navegador padrão</b><small>Usado quando o pedido não diz outro.</small></div><select id="nav"></select></div>
     <div class="row"><div class="t"><b>Só leitura</b><small>Abre e lê; não clica, digita, anexa nem roda js.</small></div><input type="checkbox" class="sw" id="ro"></div>
   </div></section>
+  <section><h2>Aviso</h2><div class="card">
+    <div class="row"><div class="t"><b>Tema</b><small>O aviso e esta janela.</small></div>
+      <div class="seg" id="tema"><button data-t="">Escuro</button><button data-t="claro">Claro</button></div></div>
+    <div class="row"><div class="t"><b>Cor</b><small>A faixa, o ícone e o botão principal do aviso.</small></div>
+      <input type="color" id="corx" hidden><div class="seg s3" id="cor"><button data-c="">Laranja</button><button data-c="sistema">Sistema</button><button data-c="outra">Outra</button></div></div>
+    <div class="row"><div class="t"><b>Posição</b><small>No canto direito da tela.</small></div>
+      <div class="seg" id="pos"><button data-p="">Em cima</button><button data-p="baixo">Embaixo</button></div></div>
+    <div class="row"><div class="t"><b>Ver um exemplo</b><small>Mostra o aviso como os chats vão usar.</small></div><button class="sec" id="ex">Mostrar</button></div>
+  </div></section>
   <section><h2>Limites</h2><div class="card"><div class="col">
     <div class="t"><b>Sites permitidos</b><small>Um domínio por linha. Vazio: todos.</small></div>
     <textarea id="sites" placeholder="web.whatsapp.com"></textarea>
@@ -67,7 +80,7 @@
   // Tudo o que vem do registro é texto de página (não confiável): só textContent, nunca innerHTML.
   const el = id => document.getElementById(id);
   const NAVS = ['Vivaldi', 'Google Chrome', 'Brave Browser', 'Microsoft Edge', 'Arc'];
-  let cur = {stopped: false, show: false, read_only: false, sites: [], browser: ''}, seq = 0;
+  let cur = {stopped: false, show: false, read_only: false, sites: [], browser: '', cor: '', posicao: '', tema: ''}, seq = 0;
   for (const n of NAVS) el('nav').add(new Option(n, n));
   const send = () => { document.title = 'c:' + (++seq) + ':' + JSON.stringify(cur); paint(); };
   const host = s => s.trim().toLowerCase().replace(/^[a-z]+:\/\//, '').replace(/[\/?#:].*$/, '').replace(/^(\*\.|www\.)/, '');
@@ -79,6 +92,12 @@
     for (const b of el('modo').children) b.classList.toggle('on', (b.dataset.show === '1') === cur.show);
     el('ro').checked = cur.read_only;
     el('nav').value = cur.browser || 'Vivaldi';
+    const cor = cur.cor || '', tipo = cor.startsWith('#') ? 'outra' : cor;
+    for (const b of el('cor').children) b.classList.toggle('on', b.dataset.c === tipo);
+    el('corx').hidden = tipo !== 'outra';
+    if (tipo === 'outra') el('corx').value = cor;
+    for (const b of el('pos').children) b.classList.toggle('on', b.dataset.p === (cur.posicao || ''));
+    for (const b of el('tema').children) b.classList.toggle('on', b.dataset.t === (cur.tema || ''));
     if (document.activeElement !== el('sites')) el('sites').value = cur.sites.join('\n');
   }
 
@@ -107,6 +126,12 @@
   for (const b of el('modo').children) b.onclick = () => { cur.show = b.dataset.show === '1'; send(); };
   el('ro').onchange = () => { cur.read_only = el('ro').checked; send(); };
   el('nav').onchange = () => { cur.browser = el('nav').value; send(); };
+  for (const b of el('cor').children) b.onclick = () => {
+    cur.cor = b.dataset.c === 'outra' ? ((cur.cor || '').startsWith('#') ? cur.cor : '#ff5a1f') : b.dataset.c; send(); };
+  el('corx').oninput = () => { cur.cor = el('corx').value; send(); };
+  for (const b of el('pos').children) b.onclick = () => { cur.posicao = b.dataset.p; send(); };
+  for (const b of el('tema').children) b.onclick = () => { cur.tema = b.dataset.t; send(); };
+  el('ex').onclick = () => { document.title = 't:' + (++seq); };
   el('sites').onchange = () => { cur.sites = [...new Set(el('sites').value.split(/[\s,;]+/).map(host).filter(Boolean))]; send(); };
   paint();
 </script>

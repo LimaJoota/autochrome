@@ -40,6 +40,7 @@ Then, in the browser, turn on **Allow JavaScript from Apple Events** (Vivaldi: S
 | `attach` | Puts a local file into a file input, drops it on a drop area, or pastes it into a field (`paste`, used by WhatsApp Web). |
 | `js` | Runs JavaScript in the tab (async function body: `return`, and `await` if needed). `label` says in plain words what it does, for the log. |
 | `close` | Closes a tab by id. |
+| `ask` | Asks you for an OK without stopping your work: a small window in the top-right corner with the question and up to 3 buttons. It never takes the keyboard. Returns the button you clicked, or "no answer" after `wait` seconds. With `key`, the question stays up and the next call with the same key gets your click, so a scheduled task can ask now and act on its next run. |
 
 Every tool takes `browser` and `show`. Without MCP: `python3 autochrome.py call read '{"tab_id":"123"}'`.
 
@@ -57,6 +58,7 @@ autochrome lives in the menu bar. The icon is a cursor, slashed while stopped, a
 - **Stop / Resume**: every call is refused until you resume.
 - **Recent actions**: the last eight in plain words: time, which chat, what it did and where ("12:21 Panel: tried to open Bookmarks"). A failure shows why underneath. Code never shows: `js` takes a short `label` that goes to the log instead.
 - **Mode** (Hidden / Visible), **Browser** (the default one) and **Read only** (no click, type, attach or `js`).
+- **Questions**: a question from `ask` shows in the corner over every app and Space until you click a button. Settings has its theme (dark, like Escrevoz, or light), its colour (autochrome orange, the system accent or any colour), its place (top or bottom right) and a button that shows an example. The icon turns into a speech bubble while one waits. Questions older than 6 hours are dropped.
 - **Settings…** (⌘,): a window with the same options, **Allowed sites** (actions only on these domains; empty means all) and the full log.
 
 `python3 autochrome.py panel` opens Settings. `python3 autochrome.py barra` adds autochrome to your Login Items, so the icon comes back after a restart.

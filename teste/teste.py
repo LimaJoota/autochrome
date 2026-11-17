@@ -28,6 +28,13 @@ def travas():
     recusa("click", {"target": "1"}, {}, "tab_id")
     recusa("attach", {"tab_id": "1", "path": "~/.ssh/id_ed25519"}, {}, "sensível")
     recusa("open", {"url": "https://evil.example/x"}, {"sites": ["whatsapp.com"]}, "fora da lista")
+    # ask: com key o aviso fica e a próxima chamada pega o botão; sem key ele sai no fim da espera
+    assert v.ask("Pode?", wait=0, key="k1").startswith("sem resposta")
+    assert v.ask("Pode?", wait=0, key="k1").startswith("sem resposta")  # não duplica o aviso
+    assert sorted(os.listdir(os.path.join(v.D, "pedidos"))) == ["k1.json"]
+    pathlib.Path(v.D, "pedidos", "k1.resposta").write_text("Agora não")
+    assert v.ask("Pode?", wait=0, key="k1") == "Agora não" and not os.path.exists(os.path.join(v.D, "pedidos", "k1.resposta"))
+    assert v.ask("Pode?", wait=0) == "sem resposta" and os.listdir(os.path.join(v.D, "pedidos")) == ["k1.json"]
     assert v.guard("open", {"url": "https://web.whatsapp.com/"}, dict(stopped=False, show=False, read_only=False,
                                                                      sites=["whatsapp.com"])) == "web.whatsapp.com"
     v.log("type", {"target": "#i", "text": "ghp_" + "x" * 30}, "a.com", True, "")
