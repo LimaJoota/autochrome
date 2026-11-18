@@ -141,6 +141,14 @@ def open_(url, activate=False):
     activate = activate or SHOW
     if not activate:
         esperar_parado()
+    # 18/11: dois processos abrindo juntos viam 2 ids novos, falhavam os dois e deixavam a aba aberta sem dono
+    import fcntl
+    with open("/tmp/autochrome-open.lock", "w") as trava:
+        fcntl.flock(trava, fcntl.LOCK_EX)
+        return _open(url, activate)
+
+
+def _open(url, activate):
     return jxa("""const BG=%s;
       // Ele está no navegador: aba nova agora pegaria o que ele digita. Espera ele sair por até 10 s.
       for(let i=0;BG&&i<40&&WS.frontmostApplication.localizedName.js===APPNAME;i++) delay(0.25);
@@ -152,11 +160,12 @@ def open_(url, activate=False):
       w.tabs.push(v.Tab({url:%s})); volta(); keepFocus(1.5); volta();
       // O Vivaldi põe a aba nova ao lado da ativa, não no fim: acha pela diferença de ids.
       let novos=[]; for(let i=0;i<20&&!novos.length;i++){novos=ids().filter(x=>!before.has(x)); if(!novos.length) delay(0.1);}
+      if(novos.length>1) novos=novos.filter(x=>tab(x).url().startsWith(%s));  // outra aba abriu no mesmo instante
       if(novos.length!==1) throw new Error("não achei a aba nova com segurança ("+novos.length+" ids novos)");
       const t=tab(novos[0]);
       for(let i=0;i<80&&t.loading();i++){ volta(); delay(0.25); }
       volta();
-      return t.id();""" % ("false" if activate else "true", json.dumps(url)))
+      return t.id();""" % ("false" if activate else "true", json.dumps(url), json.dumps(url.split("#")[0])))
 
 
 def read(tab_id=None, max_elements=150, max_text=6000):
