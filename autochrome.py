@@ -116,8 +116,29 @@ def tabs():
       return o.join('\\n');""")
 
 
+def ocioso():
+    """Segundos desde a última tecla ou mexida do mouse do usuário (HIDIdleTime do macOS)."""
+    r = subprocess.run(["ioreg", "-c", "IOHIDSystem", "-d", "4"], capture_output=True, text=True, timeout=10)
+    m = re.search(r'"HIDIdleTime" = (\d+)', r.stdout)
+    return int(m.group(1)) / 1e9 if m else 0.0
+
+
+def esperar_parado(seg=8, ate=60):
+    """Aba nova ou fechada pisca o navegador na frente; quem estiver digitando perde as teclas para a barra de busca
+    (18/11/2026: "Proibir de qualquer chat de abrir uma tela na minha tela enquanto eu estiver usando").
+    Só segue com o teclado e o mouse parados há `seg` segundos; espera até `ate` segundos."""
+    fim = time.time() + ate
+    while ocioso() < seg:
+        if time.time() > fim:
+            raise RuntimeError("O usuário está digitando ou mexendo no Mac: não abri nem fechei aba para não roubar o teclado. "
+                               "Siga com o resto e tente de novo mais tarde, sem repetir em laço.")
+        time.sleep(1)
+
+
 def open_(url, activate=False):
     activate = activate or SHOW
+    if not activate:
+        esperar_parado()
     return jxa("""const BG=%s;
       // Ele está no navegador: aba nova agora pegaria o que ele digita. Espera ele sair por até 10 s.
       for(let i=0;BG&&i<40&&WS.frontmostApplication.localizedName.js===APPNAME;i++) delay(0.25);
@@ -278,6 +299,8 @@ def ask(text, options=None, wait=60, key="", items=None):
 
 
 def close(tab_id):
+    if not SHOW:
+        esperar_parado()
     return jxa("tab(%s).close(); keepFocus(0.8); return 'fechada';" % json.dumps(tab_id))
 
 
