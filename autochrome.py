@@ -274,12 +274,11 @@ def ask(text, options=None, wait=60, key="", items=None):
     nome = re.sub(r"[^\w-]", "", str(key))[:60] or "p%d" % time.time_ns()
     p, r = os.path.join(pasta, nome + ".json"), os.path.join(pasta, nome + ".resposta")
     if not os.path.exists(p) and not os.path.exists(r):  # mesma key já na tela: não repete o aviso
-        with open(p + ".tmp", "w") as f:
-            its = [{c: " ".join(str(i.get(c, "")).split())[:40] for c in ("aba", "site", "pilha")}
+        its = [{c: " ".join(str(i.get(c, "")).split())[:40] for c in ("aba", "site", "pilha")}
                for i in (items if isinstance(items, list) else []) if isinstance(i, dict)][:4]
-        json.dump({"chat": chat(), "text": "\n".join(" ".join(l.split()) for l in str(text).splitlines() if l.strip())[:400],
-                   "options": opts, "items": its, "t": time.time()},
-                      f, ensure_ascii=False)
+        with open(p + ".tmp", "w", encoding="utf-8") as f:
+            json.dump({"chat": chat(), "text": "\n".join(" ".join(l.split()) for l in str(text).splitlines() if l.strip())[:400],
+                       "options": opts, "items": its, "t": time.time()}, f, ensure_ascii=False)
         os.replace(p + ".tmp", p)  # o painel nunca lê meio arquivo
     fim = time.time() + max(0.0, min(float(wait), 3600.0))
     while not os.path.exists(r):
