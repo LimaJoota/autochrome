@@ -40,6 +40,7 @@ Then, in the browser, turn on **Allow JavaScript from Apple Events** (Vivaldi: S
 | `attach` | Puts a local file into a file input, drops it on a drop area, or pastes it into a field (`paste`, used by WhatsApp Web). |
 | `js` | Runs JavaScript in the tab (async function body: `return`, and `await` if needed). `label` says in plain words what it does, for the log. |
 | `close` | Closes a tab by id. |
+| `audio` | WhatsApp Web: downloads a voice message from the open chat through the message menu, without playing it, keeps the `.ogg` in autochrome's folder and returns the transcript from a local `whisper-cli` model. `n` picks the message (1 = the latest). |
 | `ask` | Asks you for an OK without stopping your work: a small window in the top-right corner with the question and up to 3 buttons. It never takes the keyboard. Returns the button you clicked, or "no answer" after `wait` seconds. With `key`, the question stays up and the next call with the same key gets your click, so a scheduled task can ask now and act on its next run. |
 
 Every tool takes `browser` and `show`. Without MCP: `python3 autochrome.py call read '{"tab_id":"123"}'`.
@@ -108,7 +109,7 @@ Checks the panel limits without a browser, then opens a local page in a backgrou
 
 ## Status
 
-Tested end to end on Vivaldi 8.3 on macOS with the local test page. Chrome, Brave, Edge and Arc not run yet. Not yet run on WhatsApp Web.
+Tested end to end on Vivaldi 8.3 on macOS with the local test page. `audio` was run on a real WhatsApp Web voice message. Chrome, Brave, Edge and Arc not run yet. Not yet run on WhatsApp Web.
 
 Not affiliated with Google or Vivaldi Technologies. Chrome and Vivaldi are their trademarks.
 
