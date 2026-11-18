@@ -70,7 +70,8 @@ const el=(t)=>{const e=typeof t==='number'||/^\\d+$/.test(t)?document.querySelec
 
 
 def jxa(body):
-    script = "function run(){const v=Application(%s),APPNAME=%s,SHOW=%s;%s\n%s}" % (
+    # Navegador fechado: qualquer chamada ao app o reabriria (18/11/2026: "mas ele ta reabrindo"). Recusa.
+    script = "function run(){const v=Application(%s),APPNAME=%s,SHOW=%s;if(!v.running())throw new Error('FECHADO: '+APPNAME+' está fechado; não reabro. Tente mais tarde.');%s\n%s}" % (
         json.dumps(APP), json.dumps(APP), "true" if SHOW else "false", JXA_TAB, body)
     r = subprocess.run(["osascript", "-l", "JavaScript"], input=script,
                        capture_output=True, text=True, timeout=90)
